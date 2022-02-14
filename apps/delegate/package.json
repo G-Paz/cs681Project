@@ -1,0 +1,17 @@
+{
+  "name": "delegate",
+  "version": "1.0.0",
+  "description": "Contains back-end services for the game.",
+  "type": "module",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "delegate",
+    "service",
+    "game"
+  ],
+  "author": "gustavo",
+  "license": "ISC"
+}
