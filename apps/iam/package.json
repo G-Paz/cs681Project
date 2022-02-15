@@ -1,0 +1,18 @@
+{
+  "name": "iam",
+  "version": "1.0.0",
+  "description": "Contains back-end services for identity management.",
+  "type": "module",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "iam",
+    "service",
+    "users",
+    "game"
+  ],
+  "author": "gustavo",
+  "license": "ISC"
+}
