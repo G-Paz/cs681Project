@@ -1,4 +1,10 @@
 # .pgpass requires 0600 permission
+# export PGDATA=<data path>
+export PGDATA='/Library/PostgreSQL/14/data'
+
+# start database
+#sudo -u postgres pg_ctl start
+pg_ctl start -D /Library/PostgreSQL/14/data
 
 # sudo -u postgres psql -U postgres -d postgres -f drop_db.sql -a
 psql -U postgres -d postgres -f drop_db.sql -a;
