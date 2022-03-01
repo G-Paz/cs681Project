@@ -2,7 +2,7 @@
 
 #db ssl paths
 MONGO_DB_CONFIG_SSL_DIR="/etc/ssl"
-MONGO_DB_CONFIG_SSL_LOCAL_DIR="db/mongo/ssl"
+MONGO_DB_CONFIG_SSL_LOCAL_DIR="db/mongodb/ssl"
 POSTGRES_DB_CONFIG_SSL_DIR="/Library/PostgreSQL/14/data"
 POSTGRES_DB_CONFIG_SSL_LOCAL_DIR="db/postgres/ssl"
 
@@ -65,15 +65,16 @@ then
     sudo mv server.crt server.key $POSTGRES_DB_CONFIG_SSL_DIR
 elif [ "$1" = "mongodb" ]
 then
-    # rename the mongo ssl files
-    mv server.crt mongodb.crt
-    mv server.key mongodb.key
-    mv server.req mongodb.req
+    #configure the pem for mongodb
+    cat server.key server.crt > mongodb.pem
     # copy the mongo cert to the delegate ssl dir
-    cp mongodb.crt $DELEGATE_CONFIG_SSL_DIR
+    cp mongodb.pem $DELEGATE_CONFIG_SSL_DIR
     # move the ssl files to the mongo ssl dir
-    cp mongodb.crt mongodb.key mongodb.req  $MONGO_DB_CONFIG_SSL_LOCAL_DIR
-    sudo mv mongodb.crt mongodb.key mongodb.req  $MONGO_DB_CONFIG_SSL_DIR
+    sudo cp mongodb.pem $MONGO_DB_CONFIG_SSL_DIR
+    # move files to local dir
+    mv mongodb.pem $MONGO_DB_CONFIG_SSL_LOCAL_DIR
+    #delete the sec files
+    rm server.req server.key server.crt
 elif [ "$1" = "iam" ]
 then
     # rename the iam ssl files
@@ -88,16 +89,17 @@ then
     mv iam.crt iam.req iam.key $IAM_CONFIG_SSL_DIR
 elif [ "$1" = "delegate" ]
 then
-    # rename the delegate ssl files
-    mv server.crt delegate.crt
-    mv server.key delegate.key
-    mv server.req delegate.req
+    #configure the pem for mongodb
+    cat server.key server.crt > delegate.pem
     # copy the delegate cert to the mongo ssl dir
-    sudo cp delegate.crt $MONGO_DB_CONFIG_SSL_DIR/caToValidateClientCertificates.crt
+    sudo cp delegate.pem $MONGO_DB_CONFIG_SSL_DIR
+    sudo cp delegate.pem $MONGO_DB_CONFIG_SSL_LOCAL_DIR
     # copy the delegate cert to the webapp ssl dir
-    cp delegate.crt $WEBAPP_CONFIG_SSL_DIR
+    cp delegate.pem $WEBAPP_CONFIG_SSL_DIR
     # move the delegate ssl files to the delegate ssl dir
-    mv delegate.crt delegate.req delegate.key $DELEGATE_CONFIG_SSL_DIR
+    mv delegate.pem $DELEGATE_CONFIG_SSL_DIR
+    #delete the sec files
+    rm server.req server.key server.crt
 elif [ "$1" = "webapp" ]
 then
     # rename the webapp ssl files

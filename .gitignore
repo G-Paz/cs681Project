@@ -108,3 +108,4 @@ dist
 *.key
 *.req
 *.crl
+*.pem
