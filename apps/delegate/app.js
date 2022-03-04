@@ -1,24 +1,27 @@
 import { createServer } from 'https';
 import config from './config.js';
-import { MongoClient } from 'mongodb'
+import { MongoClient } from 'mongodb';
 
 // Connection URL
-const url = `mongodb://${db_config.host}:${db_config.port}?tls=true`;
+const url = `mongodb://${config.mongodb.hostname}:${config.mongodb.port}?tls=true`;
 const client = new MongoClient(url,{
     tlsCAFile: `${config.mongodb.pem}`,
-    tlsCertificateKeyFile: `${config.web.pem}`
+    tlsCertificateKeyFile: `${config.web.pem}`,
+    connectTimeoutMS: config.mongodb.connection_timeout,
+    serverSelectionTimeoutMS: config.mongodb.selection_timeout,
+    maxIdleTimeMS: config.mongodb.idle_timeout
 });
 
 async function main() {
     // Use connect method to connect to the server
     await client.connect();
     console.log('Connected successfully to server');
-    const db = client.db(db_config.database);
-    const game_collection = db.collection('game');
+    const db = client.db(config.mongodb.hostname.db);
+    const games_collection = db.collection('games');
 
     // the following code examples can be pasted here...
-    const filteredDocs = await game_collection.find({}).toArray();
-    console.log('Found documents filtered by {} =>', filteredDocs);
+    const filteredGames = await games_collection.find({}).toArray();
+    console.log('Found games filtered by {} =>', filteredGames);
 
     // FIND EX - FILTER -- {} W/O FILTER
     // const filteredDocs = await collection.find({ a: 3 }).toArray();
