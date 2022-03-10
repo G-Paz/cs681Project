@@ -1,6 +1,10 @@
+// import { createServer } from 'tls';
 import { createServer } from 'https';
+import express from 'express';
+import cors from 'cors';
 import config from './config.js';
 import { MongoClient } from 'mongodb';
+import fs from 'fs';
 
 // Connection URL
 const url = `mongodb://${config.mongodb.hostname}:${config.mongodb.port}?tls=true`;
@@ -45,12 +49,67 @@ main()
 const server_hostname = config.web.hostname;
 const server_port = config.web.port;
 
-const server = createServer((req, res) => {
-    res.statusCode = 200;
-    res.setHeader('Content-Type', 'text/plain');
-    res.end('Hello World');
-});
+const options = {
+  key: fs.readFileSync(config.web.key),
+  cert: fs.readFileSync(config.web.pem),
+
+  // This is necessary only if using the client certificate authentication.
+  requestCert: true,
+  rejectUnauthorized: true,
+
+  // This is necessary only if the client uses the self-signed certificate.
+  ca: fs.readFileSync(config.webapp.pem)
+}
+
+var corsOptions = {
+    origin: 'http://localhost:4200',
+    optionsSuccessStatus: 200 // For legacy browser support
+}
+
+const app = express()
+
+app.use(cors(corsOptions));
+
+const server = createServer(options, app
+//     (req, res) => {
+//     // (socket) => {
+//     res.writeHead(404);
+//     // res.origin()
+//     res.end('hello world\n');
+//     // socket.write('welcome!\n');
+//     // socket.setEncoding('utf8');
+//     // socket.pipe(socket);
+// }
+);
 
 server.listen(server_port, server_hostname, () => {
     console.log(`Server running at http://${server_hostname}:${server_port}/`);
+}).on('session', (session) => {
+    session.origin('https://localhost:4200', 'https://example.org');
+  }).on('connection', (stream) => {
+    console.log('insecure connection');
+    console.log(stream);
+}).on('secureConnection', (stream) => {
+    // stream.authorized will be true if the client cert presented validates with our CA
+    console.log('secure connection; client authorized: ', stream.authorized);
+}).on('error', (err) => {
+    // Handle errors here.
+    console.log("hhuh");
+    throw err;
+}).on('tlsClientError', (err, socket) => {
+    // Handle errors here.
+    console.log("****************************");
+    console.log(err);
+    console.log("****************************");
+    console.log(socket);
+    console.log("****************************");
+    // throw err;
+}).on('clientError', (err, socket) => {
+    // Handle errors here.
+    console.log("clientError: ****************************");
+    console.log(err);
+    console.log("****************************");
+    console.log(socket);
+    console.log("clientError: ****************************");
+    // throw err;
 });

@@ -74,6 +74,11 @@
               "browserTarget": "chess:build:development"
             }
           },
+          "options": {
+            "sslKey": "/Users/gustavopaz/Documents/GMU/GRAD/2022/681/Project/cs681Project/config/app/webapp/ssl/webapp.key",
+            "sslCert": "/Users/gustavopaz/Documents/GMU/GRAD/2022/681/Project/cs681Project/config/app/webapp/ssl/webapp.crt",
+            "ssl": true
+          },
           "defaultConfiguration": "development"
         },
         "extract-i18n": {

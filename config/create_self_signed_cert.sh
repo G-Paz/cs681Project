@@ -81,36 +81,42 @@ then
     mv server.crt iam.crt
     mv server.key iam.key
     mv server.req iam.req
+    #configure the pem for the tls server
+    cat iam.key iam.crt > iam.pem
     # copy the iam cert to the postgres ssl dir
     sudo cp iam.crt $POSTGRES_DB_CONFIG_SSL_DIR/root.crt
     # copy the iam cert to the webapp ssl dir
-    cp iam.crt $WEBAPP_CONFIG_SSL_DIR
+    cp iam.crt iam.key $WEBAPP_CONFIG_SSL_DIR
     # move the iam ssl files to the iam ssl dir
-    mv iam.crt iam.req iam.key $IAM_CONFIG_SSL_DIR
+    mv iam.crt iam.req iam.key iam.pem $IAM_CONFIG_SSL_DIR
 elif [ "$1" = "delegate" ]
 then
     #configure the pem for mongodb
     cat server.key server.crt > delegate.pem
+    # rename the key
+    mv server.key delegate.key
     # copy the delegate cert to the mongo ssl dir
     sudo cp delegate.pem $MONGO_DB_CONFIG_SSL_DIR
     sudo cp delegate.pem $MONGO_DB_CONFIG_SSL_LOCAL_DIR
     # copy the delegate cert to the webapp ssl dir
-    cp delegate.pem $WEBAPP_CONFIG_SSL_DIR
+    cp delegate.pem delegate.key $WEBAPP_CONFIG_SSL_DIR
     # move the delegate ssl files to the delegate ssl dir
-    mv delegate.pem $DELEGATE_CONFIG_SSL_DIR
+    mv delegate.pem delegate.key $DELEGATE_CONFIG_SSL_DIR
     #delete the sec files
-    rm server.req server.key server.crt
+    rm server.req server.crt
 elif [ "$1" = "webapp" ]
 then
     # rename the webapp ssl files
     mv server.crt webapp.crt
     mv server.key webapp.key
     mv server.req webapp.req
+    #configure the pem for mongodb
+    cat webapp.key webapp.crt > webapp.pem
     # copy the webapp cert to the delegate and iam ssl dir
-    cp webapp.crt $IAM_CONFIG_SSL_DIR
-    cp webapp.crt $DELEGATE_CONFIG_SSL_DIR
+    cp webapp.crt webapp.pem $IAM_CONFIG_SSL_DIR
+    cp webapp.crt webapp.pem $DELEGATE_CONFIG_SSL_DIR
     # move the webapp ssl files to the webapp ssl dir
-    mv webapp.crt webapp.req webapp.key $WEBAPP_CONFIG_SSL_DIR
+    mv webapp.crt webapp.req webapp.key webapp.pem $WEBAPP_CONFIG_SSL_DIR
 else
     echo "-------------------------------------------------------------"
     echo "Unknown app $1 !!"
