@@ -62,7 +62,7 @@ const options = {
 }
 
 var corsOptions = {
-    origin: 'http://localhost:4200',
+    origin: 'https://localhost:4200',
     optionsSuccessStatus: 200 // For legacy browser support
 }
 
@@ -95,7 +95,7 @@ server.listen(server_port, server_hostname, () => {
 }).on('error', (err) => {
     // Handle errors here.
     console.log("hhuh");
-    throw err;
+    // throw err;
 }).on('tlsClientError', (err, socket) => {
     // Handle errors here.
     console.log("****************************");

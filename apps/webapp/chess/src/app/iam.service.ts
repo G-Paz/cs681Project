@@ -30,16 +30,15 @@ export class IamService {
       .pipe()
       .subscribe( 
         (response) => {                           //Next callback
-        console.log('response received')
-        console.error('******************************')
-        console.error(response)
-        console.error('******************************')
+        console.log('response received');
+        console.error('******************************');
+        console.error(response);
+        console.error('******************************');
       },
       (error) => {                              //Error callback
-        console.error('******************************')
-        console.error(error)
-        console.error('******************************')
-  
+        console.error('******************************');
+        console.error(error.error);
+        console.error('******************************');
         //throw error;   //You can also throw the error to a global error handler
       }
       );

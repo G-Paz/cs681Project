@@ -13,7 +13,7 @@ config.mongodb.connection_timeout = process.env.MONGODB_CONNECTION_TIMEOUT || 10
 config.mongodb.selection_timeout = process.env.MONGODB_SELECTION_TIMEOUT || 1000;
 config.mongodb.idle_timeout = process.env.MONGODB_IDLE_TIMEOUT || 1000;
 
-config.webapp.pem = process.env.WEB_PEM || "/Users/gustavopaz/Documents/GMU/GRAD/2022/681/Project/cs681Project/config/app/delegate/ssl/webapp copy.pem";
+config.webapp.pem = process.env.WEB_PEM || "../../config/app/delegate/ssl/webapp.pem";
 
 config.web.pem = process.env.WEB_PEM || "../../config/app/delegate/ssl/delegate.pem";
 config.web.key = process.env.WEB_KEY || "../../config/app/delegate/ssl/delegate.key";
