@@ -24,8 +24,8 @@ create sequence user_auth.user_id_seq start 100;
 alter table user_auth.user alter user_id set default nextval('user_auth.user_id_seq');
 
 -- grant permissions to user_seq sequence
-grant select on sequence user_auth.user_id_seq to iam_app;
-grant select on sequence user_auth.user_id_seq to gamemaster;
+grant usage on sequence user_auth.user_id_seq to iam_app;
+grant usage on sequence user_auth.user_id_seq to gamemaster;
 
 -- create role table
 create table user_auth.role(role_id integer not null, role_name text not null);
@@ -81,5 +81,5 @@ alter table user_auth.user_sec add constraint user_sec_pk primary key (user_id, 
 alter table user_auth.user_sec add constraint user_sec_fk01 foreign key (user_id) references user_auth.user(user_id);
 
 -- grant permissions to role_permission table
-grant select on table user_auth.user_sec to iam_app;
+grant select, insert on table user_auth.user_sec to iam_app;
 grant select, insert, delete, update on table user_auth.user_sec to gamemaster;

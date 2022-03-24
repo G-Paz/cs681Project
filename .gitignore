@@ -109,3 +109,6 @@ dist
 *.req
 *.crl
 *.pem
+
+# ignore caches
+/**/.angular/cache/**/*.*

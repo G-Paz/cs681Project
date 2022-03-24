@@ -3,6 +3,7 @@ import fs from 'fs';
 import { createServer } from 'https';
 import pkg from 'pg';
 import config from './config.js';
+import express from 'express';
 
 const { Client, Pool } = pkg;
 
@@ -37,13 +38,7 @@ client.connect(err => {
     }
 })
 
-client.query('SELECT NOW() as now', (err, res) => {
-    if (err) {
-        console.log(err.stack)
-    } else {
-        console.log(res.rows[0])
-    }
-})
+// createAccount('12131131111221', '12323');
 
 // connect to db with pool
 const pool = new Pool(db_config)
@@ -54,7 +49,6 @@ pool
         client.release()
     })
     .catch(err => console.error('error connecting', err.stack))
-    .then(() => pool.end())
 
 // configure and start the server
 // get server hostname and port from config
@@ -67,14 +61,65 @@ const server_options = {
     cert: fs.readFileSync(config.web.cert)
 };
 
+// var express = require('express');
+
+var app = express();
+
+app.post('/createaccount', function (req, res) {
+    // First read existing users.
+    console.log(req);
+    if(req.query.length == 2 && req.query.username && req.query.password){
+        createAccount(req.query.username, req.query.password, pool);
+    }else{
+        // send back error
+        console.log('123123')
+    }
+ });
+
 // create the server
-const server = createServer(server_options, function (req, res) {
-    res.statusCode = 200;
-    res.setHeader('Content-Type', 'text/plain');
-    res.end('Hello World');
+const server = createServer(server_options, app).on('error', (err)=> {
+    console.log(err);
+}).on('clientError', (err)=> {
+    console.log(err);
 });
+
 
 // start server
 server.listen(server_port, server_hostname, () => {
     console.log(`Server running at http://${server_hostname}:${server_port}/`);
 });
+
+function createAccount(username, password, client) {
+    client.query({
+        text: 'insert into user_auth.user '
+            + '(first_name,last_name,email_address, creation_date, active,     modified_time) '
+            + 'values'
+            + '(        $1,      $1,            $1,  current_date,   true, current_timestamp)'
+            + 'returning user_id',
+        values: [username],
+        callback: (err, res) => {
+            if (err) {
+                console.log(err.stack);
+                client.query('ROLLBACK');
+            } else {
+                client.query({
+                    text: 'insert into user_auth.user_sec '
+                        + '(user_id,user_pass,auth_code) '
+                        + 'values '
+                        + '(     $1,       $2,       $2);',
+                    values: [res.rows[0].user_id, password],
+                    callback: (err1, res1) => {
+                        if (err1) {
+                            client.query('ROLLBACK');
+                            console.log(err1.stack);
+                        } else {
+                            console.log("suucess" + res1.rows[0]);
+                        }
+                    },
+                    name: "insertUserSec"
+                });
+            }
+        },
+        name: "insertUser"
+    });
+}
