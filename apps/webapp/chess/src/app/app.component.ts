@@ -27,7 +27,7 @@ export class AppComponent {
   }
 
   get notLoggedIn(){
-    return true;
+    return this.user == undefined;
   }
 
   get notInGame(){

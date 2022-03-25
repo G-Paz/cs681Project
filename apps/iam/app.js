@@ -122,8 +122,3 @@ server.listen(server_port, server_hostname, () => {
     console.log(`Server running at http://${server_hostname}:${server_port}/`);
 });
 
-function rollbackError(err, client) {
-    console.error(err.stack);
-    client.query('ROLLBACK');
-}
-

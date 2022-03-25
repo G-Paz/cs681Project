@@ -13,11 +13,11 @@ import { User } from "./user";
   providedIn: "root",
 })
 export class IamService {
-  private userSubject: BehaviorSubject<any>;
+  public userSubject: BehaviorSubject<any>;
   public user: Observable<User>;
 
   constructor(private router: Router, private http: HttpClient) {
-    this.userSubject = new BehaviorSubject<any>(null);
+    this.userSubject = new BehaviorSubject<any>(JSON.parse(localStorage.getItem('user') + ""));
     this.user = this.userSubject.asObservable();
   }
 
