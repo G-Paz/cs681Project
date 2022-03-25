@@ -31,7 +31,7 @@ export class IamService {
   createAccount(username: string, password: string) {
     console.log("username " + username + " password " + password);
     return this.http
-      .post<any>(`${environment.iamUrl}/createaccount`, null, {
+      .post<User>(`${environment.iamUrl}/createaccount`, null, {
         params: new HttpParams()
           .set("username", username)
           .set("password", password),
