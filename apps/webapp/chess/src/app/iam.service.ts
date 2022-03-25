@@ -3,7 +3,8 @@ import { Injectable } from "@angular/core";
 import { Router } from "@angular/router";
 import { BehaviorSubject } from "rxjs/internal/BehaviorSubject";
 import { Observable } from "rxjs/internal/Observable";
-import { map } from "rxjs/operators";
+import { EMPTY } from "rxjs/internal/observable/empty";
+import { catchError, map } from "rxjs/operators";
 import { environment } from "src/environments/environment";
 import { Role } from "./role";
 import { User } from "./user";
@@ -47,14 +48,18 @@ export class IamService {
         params: new HttpParams()
           .set("username", username)
           .set("password", password),
-      })
-      .pipe(
+      }).pipe(
         map((user) => {
           console.log("wlajdla" + user);
           // store user details and jwt token in local storage to keep user logged in between page refreshes
           localStorage.setItem("user", JSON.stringify(user));
           this.userSubject.next(user);
           return user;
+        }),
+        catchError((err, caught) => {
+          console.error(err)
+          console.error(caught)
+          return EMPTY;
         })
       );
   }

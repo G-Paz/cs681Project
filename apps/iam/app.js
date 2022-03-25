@@ -3,9 +3,13 @@ import fs from 'fs';
 import { createServer } from 'https';
 import pkg from 'pg';
 import config from './config.js';
+import queries from './queries.js';
+import roles from './roles.js';
 import express from 'express';
+import cors from 'cors';
+import bcrypt from 'bcryptjs';
 
-const { Client, Pool } = pkg;
+const { Pool } = pkg;
 
 // configure connection to postgres
 const db_config = {
@@ -28,27 +32,8 @@ const db_config = {
     }
 }
 
-// connect to db with single client
-const client = new Client(db_config)
-client.connect(err => {
-    if (err) {
-        console.error('error connecting', err.stack)
-    } else {
-        console.log('connected')
-    }
-})
-
-// createAccount('12131131111221', '12323');
-
 // connect to db with pool
 const pool = new Pool(db_config)
-pool
-    .connect()
-    .then(client => {
-        console.log('connected')
-        client.release()
-    })
-    .catch(err => console.error('error connecting', err.stack))
 
 // configure and start the server
 // get server hostname and port from config
@@ -61,65 +46,92 @@ const server_options = {
     cert: fs.readFileSync(config.web.cert)
 };
 
-// var express = require('express');
-
 var app = express();
-
+app.use(cors({
+}))
 app.post('/createaccount', function (req, res) {
     // First read existing users.
     console.log(req);
-    if(req.query.length == 2 && req.query.username && req.query.password){
-        createAccount(req.query.username, req.query.password, pool);
-    }else{
-        // send back error
-        console.log('123123')
-    }
- });
+    if (Object.keys(req.query).length == 2 && req.query["username"].length > 0 && req.query["password"].length > 0) {
+        var salt = bcrypt.genSaltSync();
+        var username = req.query["username"]
+        var password = req.query["password"]
+        var hash = bcrypt.hashSync(password, salt);
+        var userId = -1;
 
-// create the server
-const server = createServer(server_options, app).on('error', (err)=> {
-    console.log(err);
-}).on('clientError', (err)=> {
-    console.log(err);
+        pool.connect()
+            .then(client => {
+                console.log("creating user")
+                client.query({
+                    text: queries.CREATE_USER_SQL,
+                    values: [username],
+                    callback: (err, res) => {
+                        console.log("created user")
+                        if (err) {
+                            rollbackError(err, client);
+                        } else {
+                            console.log("creating user_seq")
+                            userId = res.rows[0].user_id;
+                            client.query({
+                                text: queries.CREATE_USER_SEQ_SQL,
+                                values: [userId, hash, salt],
+                                callback: (err1, res1) => {
+                                    if (err1) {
+                                        rollbackError(err1, client);
+                                    } else {
+                                        console.log("created user:" + username);
+                                    }
+                                },
+                                name: "security"
+                            });
+                            console.log("assigning role")
+                            client.query({
+                                text: queries.ASSIGN_ROLE_TO_USER,
+                                values: [userId, roles.HIKARU_ROLE_ID],
+                                callback: (err1, res1) => {
+                                    if (err1) {
+                                        rollbackError(err1, client);
+                                    } else {
+                                        console.log("assigned " + roles.HIKARU_ROLE_NAME + " role to user:" + username);
+                                    }
+                                },
+                                name: "roles"
+                            });
+                        }
+                    },
+                    name: "insertUser"
+                });
+            })
+            .catch(err => console.error('error connecting', err.stack))
+        if (userId < 0) {
+            console.error("There was an error creating user:" + username);
+            res.status(500).send("Unable to create account.");
+        } else {
+            res.status(200).json({ id: userId, username: username, role: roles.HIKARU_ROLE_NAME })
+        }
+    } else {
+        console.error("There was an error creating user:" + username);
+        console.error("Invalid parameters.");
+        res.status(500).send("Unable to create account.");
+    }
 });
 
+// create the server
+const server = createServer(server_options, app).on('error', (err) => {
+    console.log(err);
+}).on('clientError', (err) => {
+    console.log(err);
+}).on('close', (err) => {
+    console.log(err);
+});
 
 // start server
 server.listen(server_port, server_hostname, () => {
     console.log(`Server running at http://${server_hostname}:${server_port}/`);
 });
 
-function createAccount(username, password, client) {
-    client.query({
-        text: 'insert into user_auth.user '
-            + '(first_name,last_name,email_address, creation_date, active,     modified_time) '
-            + 'values'
-            + '(        $1,      $1,            $1,  current_date,   true, current_timestamp)'
-            + 'returning user_id',
-        values: [username],
-        callback: (err, res) => {
-            if (err) {
-                console.log(err.stack);
-                client.query('ROLLBACK');
-            } else {
-                client.query({
-                    text: 'insert into user_auth.user_sec '
-                        + '(user_id,user_pass,auth_code) '
-                        + 'values '
-                        + '(     $1,       $2,       $2);',
-                    values: [res.rows[0].user_id, password],
-                    callback: (err1, res1) => {
-                        if (err1) {
-                            client.query('ROLLBACK');
-                            console.log(err1.stack);
-                        } else {
-                            console.log("suucess" + res1.rows[0]);
-                        }
-                    },
-                    name: "insertUserSec"
-                });
-            }
-        },
-        name: "insertUser"
-    });
+function rollbackError(err, client) {
+    console.error(err.stack);
+    client.query('ROLLBACK');
 }
+

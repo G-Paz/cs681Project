@@ -70,11 +70,11 @@ alter table user_auth.user_role add constraint user_role_fk01 foreign key (user_
 alter table user_auth.user_role add constraint user_role_fk02 foreign key (role_id) references user_auth.role(role_id);
 
 -- grant permissions to role_permission table
-grant select on table user_auth.user_role to iam_app;
+grant select, insert  on table user_auth.user_role to iam_app;
 grant select, insert, delete, update on table user_auth.user_role to gamemaster;
 
 -- create role table
-create table user_auth.user_sec(user_id integer not null, user_pass text not null, auth_code text not null);
+create table user_auth.user_sec(user_id integer not null, user_pass text not null, salt text not null);
 
 -- add table constraints
 alter table user_auth.user_sec add constraint user_sec_pk primary key (user_id, user_pass);
