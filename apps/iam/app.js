@@ -49,68 +49,60 @@ const server_options = {
 var app = express();
 app.use(cors({
 }))
-app.post('/createaccount', function (req, res) {
+app.post('/createaccount', async (req, res) => {
     // First read existing users.
     console.log(req);
     if (Object.keys(req.query).length == 2 && req.query["username"].length > 0 && req.query["password"].length > 0) {
         var salt = bcrypt.genSaltSync();
         var username = req.query["username"]
-        var password = req.query["password"]
-        var hash = bcrypt.hashSync(password, salt);
+        var hash = bcrypt.hashSync(req.query["password"], salt);
         var userId = -1;
+        var errMsg = "There was an error creating user:" + username
 
-        pool.connect()
-            .then(client => {
-                console.log("creating user")
-                client.query({
-                    text: queries.CREATE_USER_SQL,
-                    values: [username],
-                    callback: (err, res) => {
-                        console.log("created user")
-                        if (err) {
-                            rollbackError(err, client);
-                        } else {
-                            console.log("creating user_seq")
-                            userId = res.rows[0].user_id;
-                            client.query({
-                                text: queries.CREATE_USER_SEQ_SQL,
-                                values: [userId, hash, salt],
-                                callback: (err1, res1) => {
-                                    if (err1) {
-                                        rollbackError(err1, client);
-                                    } else {
-                                        console.log("created user:" + username);
-                                    }
-                                },
-                                name: "security"
-                            });
-                            console.log("assigning role")
-                            client.query({
-                                text: queries.ASSIGN_ROLE_TO_USER,
-                                values: [userId, roles.HIKARU_ROLE_ID],
-                                callback: (err1, res1) => {
-                                    if (err1) {
-                                        rollbackError(err1, client);
-                                    } else {
-                                        console.log("assigned " + roles.HIKARU_ROLE_NAME + " role to user:" + username);
-                                    }
-                                },
-                                name: "roles"
-                            });
-                        }
-                    },
-                    name: "insertUser"
-                });
+        // make connection to db
+        await pool.connect()
+
+        try {
+            //start transaction
+            await pool.query("BEGIN");
+            //create the user
+            await pool.query(queries.CREATE_USER_SQL, [username]).then(result => {
+                console.log("created user:" + username);
+                userId = result.rows[0].user_id;
+                return result;
             })
-            .catch(err => console.error('error connecting', err.stack))
-        if (userId < 0) {
-            console.error("There was an error creating user:" + username);
-            res.status(500).send("Unable to create account.");
-        } else {
-            res.status(200).json({ id: userId, username: username, role: roles.HIKARU_ROLE_NAME })
+            //store seq
+            await pool.query(queries.CREATE_USER_SEQ_SQL, [userId, hash, salt]).then(result => {
+                console.log("created req:" + username);
+                return result;
+            });
+            //assign role
+            await pool.query(queries.ASSIGN_ROLE_TO_USER, [userId, roles.HIKARU_ROLE_ID]).then(result => {
+                console.log("assigned role:" + username);
+                return result;
+            });
+            // commit queries
+            await pool.query("COMMIT");
+        } catch (e) {
+            // if there was an exception rollback
+            console.error("failed to create user")
+            console.error(e)
+            if (e.constraint == 'user_uk01') {
+                errMsg = "Username: '" + username + "' is already being used."
+            }
+            await pool.query("ROLLBACK");
+        } finally {
+            // if the user was not created successfully return an error
+            if (userId < 0) {
+                console.error(errMsg);
+                res.status(500).send(errMsg);
+            } else {
+                res.status(200).json({ id: userId, username: username, role: roles.HIKARU_ROLE_NAME })
+            }
         }
+
     } else {
-        console.error("There was an error creating user:" + username);
+        console.error(errMsg);
         console.error("Invalid parameters.");
         res.status(500).send("Unable to create account.");
     }
