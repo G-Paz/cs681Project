@@ -3,7 +3,7 @@ insert into user_auth.role
 (role_id, role_name)
 values
 (      1,   'admin'),
-(      2, 'fischer');
+(      2, 'hikaru');
 
 insert into user_auth.permission
 (permission_id, permission_name)

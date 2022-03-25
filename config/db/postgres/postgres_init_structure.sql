@@ -6,7 +6,7 @@ grant usage on schema user_auth to gamemaster;
 grant usage on schema user_auth to iam_app;
 
 -- create user table
-create table user_auth.user(user_id integer not null, first_name text not null, last_name text not null, email_address text not null, creation_date timestamptz not null, active boolean not null, modified_time timestamptz not null);
+create table user_auth.user(user_id integer not null, first_name text not null, token text, email_address text not null, creation_date timestamptz not null, active boolean not null, modified_time timestamptz not null);
 
 -- add table constraints
 alter table user_auth.user add constraint user_pk primary key (user_id);
@@ -24,8 +24,8 @@ create sequence user_auth.user_id_seq start 100;
 alter table user_auth.user alter user_id set default nextval('user_auth.user_id_seq');
 
 -- grant permissions to user_seq sequence
-grant select on sequence user_auth.user_id_seq to iam_app;
-grant select on sequence user_auth.user_id_seq to gamemaster;
+grant usage on sequence user_auth.user_id_seq to iam_app;
+grant usage on sequence user_auth.user_id_seq to gamemaster;
 
 -- create role table
 create table user_auth.role(role_id integer not null, role_name text not null);
@@ -70,16 +70,16 @@ alter table user_auth.user_role add constraint user_role_fk01 foreign key (user_
 alter table user_auth.user_role add constraint user_role_fk02 foreign key (role_id) references user_auth.role(role_id);
 
 -- grant permissions to role_permission table
-grant select on table user_auth.user_role to iam_app;
+grant select, insert  on table user_auth.user_role to iam_app;
 grant select, insert, delete, update on table user_auth.user_role to gamemaster;
 
 -- create role table
-create table user_auth.user_sec(user_id integer not null, user_pass text not null, auth_code text not null);
+create table user_auth.user_sec(user_id integer not null, user_pass text not null, salt text not null);
 
 -- add table constraints
 alter table user_auth.user_sec add constraint user_sec_pk primary key (user_id, user_pass);
 alter table user_auth.user_sec add constraint user_sec_fk01 foreign key (user_id) references user_auth.user(user_id);
 
 -- grant permissions to role_permission table
-grant select on table user_auth.user_sec to iam_app;
+grant select, insert on table user_auth.user_sec to iam_app;
 grant select, insert, delete, update on table user_auth.user_sec to gamemaster;

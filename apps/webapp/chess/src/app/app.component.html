@@ -10,11 +10,11 @@
 <body class="w3-light-grey">
     <nav>
       <ul>
-        <li><a routerLink="profile">Profile</a></li>
-        <li><a routerLink="new-game">New Game</a></li>
-        <li><a routerLink="find-game">Find Game</a></li>
-        <li class="w3-right"><a routerLink="logout">Logout</a></li>
-        <li class="w3-right"><a routerLink="login">Login</a></li>
+        <li *ngIf="loggedIn"><a routerLink="profile">Profile</a></li>
+        <li *ngIf="notInGame"><a routerLink="new-game">New Game</a></li>
+        <li *ngIf="notInGame"><a routerLink="find-game">Find Game</a></li>
+        <li *ngIf="loggedIn" class="w3-right"><a routerLink="logout">Logout</a></li>
+        <li *ngIf="notLoggedIn" class="w3-right"><a routerLink="login">Login</a></li>
       </ul>
     </nav>
     <router-outlet></router-outlet>
