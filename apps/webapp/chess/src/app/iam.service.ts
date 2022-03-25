@@ -8,6 +8,7 @@ import { catchError, map } from "rxjs/operators";
 import { environment } from "src/environments/environment";
 import { Role } from "./role";
 import { User } from "./user";
+import { Validation } from "./validation";
 
 @Injectable({
   providedIn: "root",
@@ -17,28 +18,14 @@ export class IamService {
   public user: Observable<User>;
 
   constructor(private router: Router, private http: HttpClient) {
-    this.userSubject = new BehaviorSubject<any>(JSON.parse(localStorage.getItem('user') + ""));
+    this.userSubject = new BehaviorSubject<any>(
+      JSON.parse(sessionStorage.getItem("user") + "")
+    );
     this.user = this.userSubject.asObservable();
   }
 
   public get userValue(): User {
     return this.userSubject.value;
-  }
-
-  login(username: string, password: string) {
-    return this.http
-      .post<any>(`${environment.iamUrl}/users/authenticate`, {
-        username,
-        password,
-      })
-      .pipe(
-        map((user) => {
-          // store user details and jwt token in local storage to keep user logged in between page refreshes
-          localStorage.setItem("user", JSON.stringify(user));
-          this.userSubject.next(user);
-          return user;
-        })
-      );
   }
 
   createAccount(username: string, password: string) {
@@ -48,26 +35,59 @@ export class IamService {
         params: new HttpParams()
           .set("username", username)
           .set("password", password),
-      }).pipe(
+      })
+      .pipe(
         map((user) => {
-          console.log("wlajdla" + user);
           // store user details and jwt token in local storage to keep user logged in between page refreshes
-          localStorage.setItem("user", JSON.stringify(user));
+          sessionStorage.setItem("user", JSON.stringify(user));
           this.userSubject.next(user);
           return user;
         }),
         catchError((err, caught) => {
-          console.error(err)
-          console.error(caught)
+          console.error(err);
+          console.error(caught);
           return EMPTY;
+        })
+      );
+  }
+
+  isValidSession(user: User) {
+    console.log("username " + user.id + " token " + user.token);
+    return this.http
+      .get<Validation>(`${environment.iamUrl}/isValidSession`,{
+        params: new HttpParams()
+          .set("userId", user.id)
+          .set("token", user.token),
+      })
+      .subscribe((res) => {
+        if (!res.isValid){
+          this.logout()
+        }
+      })
+  }
+
+  login(username: string, password: string) {
+    return this.http
+      .get<any>(`${environment.iamUrl}/users/authenticate`, {
+        params: new HttpParams()
+          .set("username", username)
+          .set("password", password),
+      })
+      .pipe(
+        map((user) => {
+          // store user details and jwt token in local storage to keep user logged in between page refreshes
+          sessionStorage.setItem("user", JSON.stringify(user));
+          this.userSubject.next(user);
+          return user;
         })
       );
   }
 
   logout() {
     // remove user from local storage to log user out
-    localStorage.removeItem("user");
+    sessionStorage.removeItem("user");
     this.userSubject.next(null);
     this.router.navigate(["/login"]);
   }
 }
+

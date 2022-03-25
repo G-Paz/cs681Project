@@ -11,11 +11,16 @@ import { User } from "./user";
 })
 export class AppComponent {
   title = "chess";
-  user: User | undefined;
+  user: User;
   game: Game | undefined;
 
   constructor(private iamService: IamService) {
     this.iamService.user.subscribe((x) => (this.user = x));
+    this.user = this.iamService.userValue
+  }
+
+  ngOnInit() {
+    this.iamService.isValidSession(this.user);
   }
 
   get isAdmin() {

@@ -8,8 +8,11 @@ import roles from './roles.js';
 import express from 'express';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 const { Pool } = pkg;
+
+const serverCert = fs.readFileSync(config.web.pem);
 
 // configure connection to postgres
 const db_config = {
@@ -47,16 +50,21 @@ const server_options = {
 };
 
 var app = express();
+
+const jwtOptions = { algorithm: 'RS256' };
+
 app.use(cors({
 }))
+
+
 app.post('/createaccount', async (req, res) => {
-    // First read existing users.
     console.log(req);
     if (Object.keys(req.query).length == 2 && req.query["username"].length > 0 && req.query["password"].length > 0) {
         var salt = bcrypt.genSaltSync();
         var username = req.query["username"]
         var hash = bcrypt.hashSync(req.query["password"], salt);
         var userId = -1;
+        var token = null;
         var errMsg = "There was an error creating user:" + username
 
         // make connection to db
@@ -66,7 +74,7 @@ app.post('/createaccount', async (req, res) => {
             //start transaction
             await pool.query("BEGIN");
             //create the user
-            await pool.query(queries.CREATE_USER_SQL, [username]).then(result => {
+            await pool.query(queries.CREATE_USER_SQL, [username, null]).then(result => {
                 console.log("created user:" + username);
                 userId = result.rows[0].user_id;
                 return result;
@@ -81,6 +89,12 @@ app.post('/createaccount', async (req, res) => {
                 console.log("assigned role:" + username);
                 return result;
             });
+
+            //token creation
+            console.log("created user token");
+            token = jwt.sign({ userId: userId }, serverCert, jwtOptions);
+            console.log("verifying user token");
+            jwt.verify(token, serverCert, jwtOptions);
             // commit queries
             await pool.query("COMMIT");
         } catch (e) {
@@ -93,18 +107,51 @@ app.post('/createaccount', async (req, res) => {
             await pool.query("ROLLBACK");
         } finally {
             // if the user was not created successfully return an error
-            if (userId < 0) {
+            if (userId < 0 || token == null) {
                 console.error(errMsg);
                 res.status(500).send(errMsg);
             } else {
-                res.status(200).json({ id: userId, username: username, role: roles.HIKARU_ROLE_NAME })
+                res.status(200).json({ id: userId, username: username, role: roles.HIKARU_ROLE_NAME, token: token })
             }
         }
-
     } else {
         console.error(errMsg);
         console.error("Invalid parameters.");
         res.status(500).send("Unable to create account.");
+    }
+});
+
+app.get('/isValidSession', async (req, res) => {
+    // First read existing users.
+    console.log(req);
+    if (Object.keys(req.query).length == 2 && req.query["userId"] != null && req.query["token"].length > 0) {
+        var userId = req.query["userId"];
+        var token = req.query["token"];
+        var errMsg = "There was an error. Please sign in again."
+        var isValid = false;
+
+        try {
+            isValid = jwt.verify(token, serverCert, jwtOptions).userId == userId;
+        } catch (e) {
+            // if there was an exception rollback
+            console.error("failed to validate token")
+            console.error(e)
+            if (e.name == 'TokenExpiredError') {
+                errMsg = "Token is expired"
+            }
+        } finally {
+            // if the user was not created successfully return an error
+            if (userId < 0 || token == null || !isValid) {
+                console.error(errMsg);
+                res.status(500).send(errMsg).json({ isValid: isValid });
+            } else {
+                res.status(200).json({ isValid: isValid })
+            }
+        }
+    } else {
+        console.error(errMsg);
+        console.error("Invalid parameters.");
+        res.status(500).send(errMsg);
     }
 });
 
