@@ -6,11 +6,11 @@ grant usage on schema user_auth to gamemaster;
 grant usage on schema user_auth to iam_app;
 
 -- create user table
-create table user_auth.user(user_id integer not null, first_name text not null, token text, email_address text not null, creation_date timestamptz not null, active boolean not null, modified_time timestamptz not null);
+create table user_auth.user(user_id integer not null, first_name text not null, token text, username text not null, creation_date timestamptz not null, active boolean not null, modified_time timestamptz not null);
 
 -- add table constraints
 alter table user_auth.user add constraint user_pk primary key (user_id);
-alter table user_auth.user add constraint user_uk01 unique (email_address);
+alter table user_auth.user add constraint user_uk01 unique (username);
 
 -- grant permissions to user table
 grant select, insert on table user_auth.user to iam_app;
