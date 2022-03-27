@@ -67,8 +67,9 @@ export class IamService {
   }
 
   login(username: string, password: string) {
+    console.log("logging in user:" + username)
     return this.http
-      .get<any>(`${environment.iamUrl}/users/authenticate`, {
+      .post<any>(`${environment.iamUrl}/authenticate`, null, {
         params: new HttpParams()
           .set("username", username)
           .set("password", password),

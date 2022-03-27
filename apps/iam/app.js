@@ -51,7 +51,8 @@ const server_options = {
 
 var app = express();
 
-const jwtOptions = { algorithm: 'RS256' };
+//https://www.npmjs.com/package/jsonwebtoken
+const jwtOptions = { algorithm: 'RS256', expiresIn: '24h' };
 
 app.use(cors({
 }))
@@ -93,8 +94,7 @@ app.post('/createaccount', async (req, res) => {
             //token creation
             console.log("created user token");
             token = jwt.sign({ userId: userId }, serverCert, jwtOptions);
-            console.log("verifying user token");
-            jwt.verify(token, serverCert, jwtOptions);
+
             // commit queries
             await pool.query("COMMIT");
         } catch (e) {
@@ -121,6 +121,60 @@ app.post('/createaccount', async (req, res) => {
     }
 });
 
+app.post('/authenticate', async (req, res) => {
+    console.log(req);
+    if (Object.keys(req.query).length == 2 && req.query["username"].length > 0 && req.query["password"].length > 0) {
+        var username = req.query["username"];
+        var password = req.query["password"];
+        var userId = -1;
+        var role = null;
+        var token = null;
+        var errMsg = "There was an error verifying user:" + username
+
+        // make connection to db
+        await pool.connect()
+
+        try {
+            //start transaction
+            await pool.query("BEGIN");
+            //create the user
+            await pool.query(queries.SELECT_USER_SEC, [username]).then(result => {
+                console.log("verifying user")
+                if (result.rows.length == 1 && result.rows[0].user_pass == bcrypt.hashSync(password, result.rows[0].salt)) {
+                    console.log("signed in user:" + username);
+                    userId = result.rows[0].user_id;
+                    role = result.rows[0].role_name;
+                }
+                return result;
+            });
+
+            //token creation
+            console.log("created user token");
+            token = jwt.sign({ userId: userId }, serverCert, jwtOptions);
+
+            // commit queries
+            await pool.query("COMMIT");
+        } catch (e) {
+            // if there was an exception rollback
+            console.error("failed to verify user")
+            console.error(e)
+            await pool.query("ROLLBACK");
+        } finally {
+            // if the user was not created successfully return an error
+            if (userId < 0 || token == null || role == null) {
+                console.error(errMsg);
+                res.status(500).send(errMsg);
+            } else {
+                res.status(200).json({ id: userId, username: username, role: role, token: token })
+            }
+        }
+    } else {
+        console.error(errMsg);
+        console.error("Invalid parameters.");
+        res.status(500).send("Unable to create account.");
+    }
+});
+
 app.get('/isValidSession', async (req, res) => {
     // First read existing users.
     console.log(req);
@@ -137,7 +191,7 @@ app.get('/isValidSession', async (req, res) => {
             console.error("failed to validate token")
             console.error(e)
             if (e.name == 'TokenExpiredError') {
-                errMsg = "Token is expired"
+                errMsg = "Token is expired."
             }
         } finally {
             // if the user was not created successfully return an error

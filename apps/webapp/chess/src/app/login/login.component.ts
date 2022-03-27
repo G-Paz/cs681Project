@@ -36,6 +36,7 @@ export class LoginComponent implements OnInit {
   }
 
   onLogin() {
+    console.log("invalid information")
     // stop here if form is invalid
     if (this.loginForm.invalid) {
       return;
