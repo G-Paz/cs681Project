@@ -6,9 +6,9 @@ import { Observable } from "rxjs/internal/Observable";
 import { EMPTY } from "rxjs/internal/observable/empty";
 import { catchError, map } from "rxjs/operators";
 import { environment } from "src/environments/environment";
-import { Role } from "./role";
-import { User } from "./user";
-import { Validation } from "./validation";
+import { Role } from "../model/role";
+import { User } from "../model/user";
+import { Validation } from "../model/validation";
 
 @Injectable({
   providedIn: "root",
@@ -18,7 +18,7 @@ export class IamService {
   public user: Observable<User>;
 
   constructor(private router: Router, private http: HttpClient) {
-    this.userSubject = new BehaviorSubject<any>(
+    this.userSubject = new BehaviorSubject<User>(
       JSON.parse(sessionStorage.getItem("user") + "")
     );
     this.user = this.userSubject.asObservable();
@@ -69,7 +69,7 @@ export class IamService {
   login(username: string, password: string) {
     console.log("logging in user:" + username)
     return this.http
-      .post<any>(`${environment.iamUrl}/authenticate`, null, {
+      .post<User>(`${environment.iamUrl}/authenticate`, null, {
         params: new HttpParams()
           .set("username", username)
           .set("password", password),

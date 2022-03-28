@@ -1,0 +1,14 @@
+.gameSection{
+  padding-inline-start: 100px;
+  width: 500px;
+  height: 500px;
+  padding-bottom: 10px;
+  padding-top: 10px;
+}
+
+.boardSquare{
+  fill:blue;
+  stroke:pink;
+  fill-opacity:0.1;
+  stroke-opacity:0.9;
+}

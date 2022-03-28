@@ -112,3 +112,6 @@ dist
 
 # ignore caches
 /**/.angular/cache/**/*.*
+
+# ignore caches
+/**/package-lock.json

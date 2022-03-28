@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Game</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body class="w3-light-grey">
+  <div class="gameSection">
+    <svg viewBox="0 0 100 100">
+      <text [attr.x]="0.75" [attr.y]="3.5 + (rowId - 1) * 12.25" font-size="2.8"
+        *ngFor="let rowId of rowIds">{{rowId}}</text>
+      <text [attr.x]="10 + (columnId - 1) * 12.25" [attr.y]="99" font-size="2.8"
+        *ngFor="let columnId of columnIds">{{getCharValue(columnId)}}</text>
+      <rect [attr.x]="5 + getNumberValue(gamePiece.columnId) * 12.25" [attr.y]="gamePiece.rowId * 12.25"
+        *ngFor="let gamePiece of getGamePieces()" width="9" height="9" class="boardSquare" />
+      <text [attr.x]="5 + getNumberValue(gamePiece.columnId) * 12.25" [attr.y]="gamePiece.rowId * 12.25 + 5"
+        *ngFor="let gamePiece of getGamePieces()" font-size="2.2">{{gamePiece.piece}}</text>
+    </svg>
+  </div>
+  <form id="gameForm" [formGroup]="gameForm">
+    <div>
+      <div>
+        <span>Move this piece:</span>
+      </div>
+      <div>
+        <label for="fromRowId">Row Id:</label>
+        <input type="text" formControlName="fromRowId" name="fromRowId" id="fromRowId" required ngModel />
+      </div>
+      <div>
+        <label for="fromColumnId">Column Id:</label>
+        <input type="fromColumnId" formControlName="fromColumnId" name="fromColumnId" id="fromColumnId" required ngModel />
+      </div>
+    </div>
+    <div>
+      <div>
+        <span>To this position:</span>
+      </div>
+      <div>
+        <label for="toRowId">Row Id:</label>
+        <input type="text" formControlName="toRowId" name="toRowId" id="toRowId" required ngModel />
+      </div>
+      <div>
+        <label for="toColumnId">Column Id:</label>
+        <input type="toColumnId" formControlName="toColumnId" name="toColumnId" id="toColumnId" required ngModel />
+      </div>
+    </div>
+    <div class="w3-center w3-margin-top  w3-margin-bottom">
+      <button type="submit" (click)="quitGame()">Quit</button>
+      <button type="submit" (click)="submitMove()">Submit Move</button>
+    </div>
+  </form>
+</body>
+
+</html>

@@ -2,7 +2,7 @@ import { Component, OnInit } from "@angular/core";
 import { FormBuilder, FormGroup, Validators } from "@angular/forms";
 import { ActivatedRoute, Router } from "@angular/router";
 import { first } from "rxjs/operators";
-import { IamService } from "../iam.service";
+import { IamService } from "../../service/iam.service";
 // import * as bcrypt from 'bcryptjs';
 
 // var bcrypt = require('bcryptjs');
