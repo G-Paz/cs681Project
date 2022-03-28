@@ -12,7 +12,7 @@ import jwt from 'jsonwebtoken';
 
 const { Pool } = pkg;
 
-const serverCert = fs.readFileSync(config.web.pem);
+const webappCert = fs.readFileSync(config.webapp.pem);
 
 // configure connection to postgres
 const db_config = {
@@ -49,14 +49,10 @@ const server_options = {
     cert: fs.readFileSync(config.web.cert)
 };
 
-var app = express();
-
 //https://www.npmjs.com/package/jsonwebtoken
 const jwtOptions = { algorithm: 'RS256', expiresIn: '24h' };
 
-app.use(cors({
-}))
-
+var app = express().use(cors({}));
 
 app.post('/createaccount', async (req, res) => {
     console.log(req);
@@ -93,7 +89,7 @@ app.post('/createaccount', async (req, res) => {
 
             //token creation
             console.log("created user token");
-            token = jwt.sign({ userId: userId }, serverCert, jwtOptions);
+            token = jwt.sign({ userId: userId }, webappCert, jwtOptions);
 
             // commit queries
             await pool.query("COMMIT");
@@ -150,7 +146,7 @@ app.post('/authenticate', async (req, res) => {
 
             //token creation
             console.log("created user token");
-            token = jwt.sign({ userId: userId }, serverCert, jwtOptions);
+            token = jwt.sign({ userId: userId }, webappCert, jwtOptions);
 
             // commit queries
             await pool.query("COMMIT");
@@ -185,7 +181,7 @@ app.get('/isValidSession', async (req, res) => {
         var isValid = false;
 
         try {
-            isValid = jwt.verify(token, serverCert, jwtOptions).userId == userId;
+            isValid = jwt.verify(token, webappCert, jwtOptions).userId == userId;
         } catch (e) {
             // if there was an exception rollback
             console.error("failed to validate token")

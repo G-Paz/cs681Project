@@ -81,25 +81,29 @@ then
     mv server.crt iam.crt
     mv server.key iam.key
     mv server.req iam.req
+    #configure the pem for mongodb
+    cat iam.key iam.crt > iam.pem
     # copy the iam cert to the postgres ssl dir
     sudo cp iam.crt $POSTGRES_DB_CONFIG_SSL_DIR/root.crt
     # copy the iam cert to the webapp ssl dir
     cp iam.crt $WEBAPP_CONFIG_SSL_DIR
     # move the iam ssl files to the iam ssl dir
-    mv iam.crt iam.req iam.key $IAM_CONFIG_SSL_DIR
+    mv iam.crt iam.req iam.key iam.pem $IAM_CONFIG_SSL_DIR
 elif [ "$1" = "delegate" ]
 then
+    # rename the iam ssl files
+    mv server.crt delegate.crt
+    mv server.key delegate.key
+    mv server.req delegate.req
     #configure the pem for mongodb
-    cat server.key server.crt > delegate.pem
+    cat delegate.key delegate.crt > delegate.pem
     # copy the delegate cert to the mongo ssl dir
     sudo cp delegate.pem $MONGO_DB_CONFIG_SSL_DIR
     sudo cp delegate.pem $MONGO_DB_CONFIG_SSL_LOCAL_DIR
     # copy the delegate cert to the webapp ssl dir
     cp delegate.pem $WEBAPP_CONFIG_SSL_DIR
     # move the delegate ssl files to the delegate ssl dir
-    mv delegate.pem $DELEGATE_CONFIG_SSL_DIR
-    #delete the sec files
-    rm server.req server.key server.crt
+    mv delegate.pem delegate.key delegate.crt delegate.req $DELEGATE_CONFIG_SSL_DIR
 elif [ "$1" = "webapp" ]
 then
     # rename the webapp ssl files

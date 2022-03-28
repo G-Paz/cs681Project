@@ -1,8 +1,10 @@
 import { Component } from "@angular/core";
-import { Game } from "./game";
-import { IamService } from "./iam.service";
-import { Role } from "./role";
-import { User } from "./user";
+import { Game } from "./model/game/game";
+import { IamService } from "./service/iam.service";
+import { Role } from "./model/role";
+import { User } from "./model/user";
+import { DelegateService } from "./service/delegate.service";
+import { Router } from "@angular/router";
 
 @Component({
   selector: "app-root",
@@ -12,30 +14,43 @@ import { User } from "./user";
 export class AppComponent {
   title = "chess";
   user: User;
-  game: Game | undefined;
+  game: Game;
 
-  constructor(private iamService: IamService) {
+  constructor(
+    private iamService: IamService,
+    private delegateService: DelegateService,
+    private router: Router
+  ) {
     this.iamService.user.subscribe((x) => (this.user = x));
-    this.user = this.iamService.userValue
+    this.user = this.iamService.userValue;
+    this.delegateService.game.subscribe((x) => (this.game = x));
+    this.game = this.delegateService.gameValue;
+    if (this.game) {
+      this.router.navigate(["/gamestate"]);
+    }
   }
 
   ngOnInit() {
     this.iamService.isValidSession(this.user);
   }
 
+  logout() {
+    this.iamService.logout();
+  }
+
   get isAdmin() {
     return this.user && this.user.role === Role.Admin;
   }
 
-  get loggedIn(){
+  get loggedIn() {
     return this.user != undefined;
   }
 
-  get notLoggedIn(){
+  get notLoggedIn() {
     return this.user == undefined;
   }
 
-  get notInGame(){
-    return this.game != undefined;
+  get notInGame() {
+    return this.game == undefined;
   }
 }

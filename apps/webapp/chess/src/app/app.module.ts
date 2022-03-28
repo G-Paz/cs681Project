@@ -4,8 +4,9 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { BrowserModule } from '@angular/platform-browser';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
-import { LoginComponent } from './login/login.component';
-import { CreateaccountComponent } from './createaccount/createaccount.component';
+import { LoginComponent } from './view/login/login.component';
+import { CreateaccountComponent } from './view/createaccount/createaccount.component';
+import { GameStateComponent } from './view/game-state/game-state.component';
 
 
 @NgModule({
@@ -13,6 +14,7 @@ import { CreateaccountComponent } from './createaccount/createaccount.component'
     AppComponent,
     LoginComponent,
     CreateaccountComponent,
+    GameStateComponent,
   ],
   imports: [
     HttpClientModule,
