@@ -36,6 +36,7 @@ export class AppComponent {
 
   logout() {
     this.iamService.logout();
+    this.delegateService.logout();
   }
 
   get isAdmin() {

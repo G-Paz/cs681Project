@@ -61,7 +61,11 @@ export class GameStateComponent implements OnInit {
 
   ngOnInit(): void {
     var user = this.iamService.userValue;
-    this.delegateService.getGameState(1, user.token, user.id);
+    if(user && this.gameState){
+      this.delegateService.getGameState(this.gameState._id, user.token, user.id);
+    }else{
+      this.delegateService.createGameState(user.token, user.id)
+    }
     this.gameForm = this.formBuilder.group({
       fromColumnId: ["", Validators.required],
       fromRowId: ["", Validators.required],
