@@ -4,6 +4,8 @@
   height: 500px;
   padding-bottom: 10px;
   padding-top: 10px;
+  float: right;
+  margin-right: 5%;
 }
 
 .boardSquare{
@@ -11,4 +13,16 @@
   stroke:pink;
   fill-opacity:0.1;
   stroke-opacity:0.9;
+}
+
+.serverMessage{
+  color:red;
+  text-align: center;
+  vertical-align: middle;
+  width: 100%;
+  padding: 1%;
+}
+
+.formContainer{
+  padding: 1%;
 }

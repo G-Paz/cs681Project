@@ -25,8 +25,12 @@ export class AppComponent {
     this.user = this.iamService.userValue;
     this.delegateService.game.subscribe((x) => (this.game = x));
     this.game = this.delegateService.gameValue;
-    if (this.game) {
-      this.router.navigate(["/gamestate"]);
+    if(this.user){
+      if (this.game) {
+        this.router.navigate(["/gamestate"]);
+      }
+    }else{
+      this.router.navigate(["/login"]);
     }
   }
 

@@ -15,6 +15,7 @@
   "author": "gustavo",
   "license": "ISC",
   "dependencies": {
+    "chess.js": "^0.12.1",
     "cors": "^2.8.5",
     "express": "^4.17.3",
     "jsonwebtoken": "^8.5.1",
