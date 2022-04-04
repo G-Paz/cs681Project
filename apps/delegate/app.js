@@ -36,6 +36,7 @@ const jwtOptions = { algorithm: 'RS256', expiresIn: '24h' };
 var app = express().use(cors({}));
 
 app.post('/createGame', async (req, res) => {
+
     // console.log(req);
     if (Object.keys(req.query).length == 2 && req.query["token"].length > 0 && req.query["userId"] != null) {
         var userId = parseInt(req.query["userId"])
@@ -84,7 +85,6 @@ app.post('/createGame', async (req, res) => {
 });
 
 app.post('/gameState', async (req, res) => {
-    // console.log(req);
     if (Object.keys(req.query).length == 3 && req.query["gameId"] != null && req.query["token"].length > 0 && req.query["userId"] != null) {
         var userId = req.query["userId"]
         var token = req.query["token"]

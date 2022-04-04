@@ -105,6 +105,22 @@ export class DelegateService {
       );
   }
 
+  createGameState(token: string, userId: number) {
+    console.log("creating game state")
+    return this.http
+      .get<Game>(`${environment.delegateUrl}/createGame`, {
+        params: new HttpParams()
+          .set("userId", userId)
+          .set("token", token),
+      })
+      .subscribe((res) => {
+        // store user details and jwt token in local storage to keep user logged in between page refreshes
+        sessionStorage.setItem("game", JSON.stringify(res));
+        this.gameSubject.next(res);
+        return res;
+      })
+  }
+
   quitGame() {
     // remove user from local storage to log user out
     sessionStorage.removeItem("game");
