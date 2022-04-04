@@ -4,6 +4,7 @@ queries.INIT_GAME_STATE_TEMPLATE_JSON = {
   "_id": null,
   "br-player": 2,
   "w-player": 1,
+  "fenState": null,
   "state": [
     {
       "rowId": 1,
