@@ -7,6 +7,7 @@ import { AppComponent } from './app.component';
 import { LoginComponent } from './view/login/login.component';
 import { CreateaccountComponent } from './view/createaccount/createaccount.component';
 import { GameStateComponent } from './view/game-state/game-state.component';
+import { FindGameComponent } from './view/find-game/find-game.component';
 
 
 @NgModule({
@@ -15,12 +16,13 @@ import { GameStateComponent } from './view/game-state/game-state.component';
     LoginComponent,
     CreateaccountComponent,
     GameStateComponent,
+    FindGameComponent,
   ],
   imports: [
     HttpClientModule,
     BrowserModule,
     AppRoutingModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
   ],
   providers: [],
   bootstrap: [AppComponent]

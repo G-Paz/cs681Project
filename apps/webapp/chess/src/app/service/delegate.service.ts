@@ -17,6 +17,8 @@ export class DelegateService {
   public game: Observable<Game>;
   public gameStatus: BehaviorSubject<any>;
   public status: Observable<string>;
+  public allGames: BehaviorSubject<Array<Game>>;
+  public games: Observable<Array<Game>>;
 
   constructor(private router: Router, private http: HttpClient) {
     //initialize the game from the one stored in the browser
@@ -25,8 +27,11 @@ export class DelegateService {
     );
     this.game = this.gameSubject.asObservable();
     // initialize the game status
-    this.gameStatus = new BehaviorSubject<string>('');
+    this.gameStatus = new BehaviorSubject<string>("");
     this.status = this.gameStatus.asObservable();
+    // initialize the game status
+    this.allGames = new BehaviorSubject<any>(new Array<Game>());
+    this.games = this.allGames.asObservable();
   }
 
   getGameState(gameId: number, token: string, userId: number) {
@@ -91,7 +96,7 @@ export class DelegateService {
       })
       .subscribe(
         (res) => {
-          console.error(res)
+          console.error(res);
           // store user details and jwt token in local storage to keep user logged in between page refreshes
           sessionStorage.setItem("game", JSON.stringify(res));
           this.gameSubject.next(res);
@@ -105,18 +110,95 @@ export class DelegateService {
       );
   }
 
-  quitGame() {
+  getAllGames(userId: number, token: string) {
+    console.log("joining game");
+    return this.http
+      .get<Array<Game>>(`${environment.delegateUrl}/getAllGames`, {
+        headers: new HttpHeaders(),
+        params: new HttpParams().set("userId", userId).set("token", token),
+      })
+      .subscribe(
+        (res) => {
+          console.error(res);
+          // store user details and jwt token in local storage to keep user logged in between page refreshes
+          this.allGames.next(res);
+          return res;
+        },
+        (error) => {
+          console.error("Error loading games:" + error);
+        }
+      );
+  }
+
+  joinGame(gameId: number, userId: number, token: string, complete: () => void) {
+    console.log("joining game");
+    return this.http
+      .post<Game>(`${environment.delegateUrl}/joinGame`, null, {
+        headers: new HttpHeaders(),
+        params: new HttpParams()
+          .set("gameId", gameId)
+          .set("userId", userId)
+          .set("token", token),
+      })
+      .subscribe(
+        (res) => {
+          console.error(res);
+          // store user details and jwt token in local storage to keep user logged in between page refreshes
+          sessionStorage.setItem("game", JSON.stringify(res));
+          this.gameSubject.next(res);
+          this.gameStatus.next("");
+          complete()
+          return res;
+        },
+        (error) => {
+          console.error("Error joining game:" + error);
+          this.gameStatus.next("Unable to join game... ;/");
+        }
+      );
+  }
+
+  quitGame(gameId: number, userId: number, token: string) {
+    this.http
+      .post<Game>(`${environment.delegateUrl}/quitGame`, null, {
+        headers: new HttpHeaders(),
+        params: new HttpParams()
+          .set("gameId", gameId)
+          .set("userId", userId)
+          .set("token", token),
+      })
+      .subscribe(
+        (res) => {
+          console.log("successfully quit game");
+          return res;
+        },
+        (error) => {
+          console.error("Error quitting game:" + error);
+        }
+      );
     // remove user from local storage to log user out
+    this.localQuitGame();
+  }
+
+  localQuitGame() {
     sessionStorage.removeItem("game");
     this.gameSubject.next(null);
+    this.gameStatus.next("");
     this.router.navigate(["/"]);
   }
 
-  logout() {
-    this.quitGame();
+  logout(gameId: number, userId: number, token: string) {
+    if (gameId) {
+      this.quitGame(gameId, userId, token);
+    } else {
+      this.localQuitGame();
+    }
   }
 
   public get gameValue(): Game {
     return this.gameSubject.value;
+  }
+
+  public get allGamesValue(): Array<Game> {
+    return this.allGames.value;
   }
 }

@@ -25,36 +25,49 @@
   </div>
   <div class="formContainer">
     <form id="gameForm" [formGroup]="gameForm">
-      <div>
+      <div *ngIf="inGame() && isUsersTurn() && !isGameDone()">
         <div>
-          <span>Move this piece:</span>
+          <div>
+            <span>Move this piece:</span>
+          </div>
+          <div>
+            <label for="fromRowId">Row Id:</label>
+            <input type="text" formControlName="fromRowId" name="fromRowId" id="fromRowId" required ngModel />
+          </div>
+          <div>
+            <label for="fromColumnId">Column Id:</label>
+            <input type="fromColumnId" formControlName="fromColumnId" name="fromColumnId" id="fromColumnId" required
+              ngModel />
+          </div>
         </div>
         <div>
-          <label for="fromRowId">Row Id:</label>
-          <input type="text" formControlName="fromRowId" name="fromRowId" id="fromRowId" required ngModel />
-        </div>
-        <div>
-          <label for="fromColumnId">Column Id:</label>
-          <input type="fromColumnId" formControlName="fromColumnId" name="fromColumnId" id="fromColumnId" required
-            ngModel />
-        </div>
-      </div>
-      <div>
-        <div>
-          <span>To this position:</span>
-        </div>
-        <div>
-          <label for="toRowId">Row Id:</label>
-          <input type="text" formControlName="toRowId" name="toRowId" id="toRowId" required ngModel />
-        </div>
-        <div>
-          <label for="toColumnId">Column Id:</label>
-          <input type="toColumnId" formControlName="toColumnId" name="toColumnId" id="toColumnId" required ngModel />
+          <div>
+            <span>To this position:</span>
+          </div>
+          <div>
+            <label for="toRowId">Row Id:</label>
+            <input type="text" formControlName="toRowId" name="toRowId" id="toRowId" required ngModel />
+          </div>
+          <div>
+            <label for="toColumnId">Column Id:</label>
+            <input type="toColumnId" formControlName="toColumnId" name="toColumnId" id="toColumnId" required ngModel />
+          </div>
         </div>
       </div>
       <div class="w3-center w3-margin-top  w3-margin-bottom">
-        <button type="submit" (click)="quitGame()">Quit</button>
-        <button type="submit" (click)="submitMove()">Submit Move</button>
+        <button type="submit" *ngIf="!isGameDone()" (click)="quitGame()">Quit</button>
+        <button type="submit" *ngIf="isGameDone()" (click)="exitGame()">Exit</button>
+        <button type="submit" *ngIf="inGame() && isUsersTurn() && !isGameDone()" (click)="submitMove()">Submit Move</button>
+      </div>
+      <div *ngIf="!inGame()">
+        <div class="serverMessage">
+          <span>Waiting for an opponent...</span>
+        </div>
+      </div>
+      <div *ngIf="hasUserWon()">
+        <div class="serverMessage">
+          <span>You won!</span>
+        </div>
       </div>
     </form>
   </div>
