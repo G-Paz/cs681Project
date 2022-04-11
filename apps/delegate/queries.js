@@ -2,9 +2,14 @@ const queries = {}
 
 queries.INIT_GAME_STATE_TEMPLATE_JSON = {
   "_id": null,
-  "br-player": 2,
-  "w-player": 1,
+  "br_player": 2,
+  "w_player": 1,
+  "current_player": 1,
   "fenState": null,
+  "winner_player": null,
+  "winner_by": null,
+  "creationDate": null,
+  "lastModified": null,
   "state": [
     {
       "rowId": 1,

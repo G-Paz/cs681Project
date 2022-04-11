@@ -49,7 +49,6 @@ const server_options = {
     cert: fs.readFileSync(config.web.cert)
 };
 
-//https://www.npmjs.com/package/jsonwebtoken
 const jwtOptions = { algorithm: 'RS256', expiresIn: '24h' };
 
 var app = express().use(cors({}));

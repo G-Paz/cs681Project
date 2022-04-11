@@ -1,7 +1,5 @@
 // change to the chess db and refresh
-db = db.getSiblingDB('chess');
-
-db.dropDatabase();
+db.dropDatabase('chess');
 db.dropAllUsers();
 
 // Provides all the privileges of the read role plus ability to modify data on all non-system collections 

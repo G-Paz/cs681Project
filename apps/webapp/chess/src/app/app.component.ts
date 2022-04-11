@@ -39,8 +39,8 @@ export class AppComponent {
   }
 
   logout() {
+    this.delegateService.logout(this.game._id, this.user.id, this.user.token);
     this.iamService.logout();
-    this.delegateService.logout();
   }
 
   get isAdmin() {
