@@ -27,11 +27,11 @@ export class GameGuard implements CanActivate {
     | UrlTree {
     const game = this.delegateService.gameValue;
     if (game) {
-      console.error("not here");
+      console.log("game state exists");
       this.router.navigate(["/gamestate"]);
       return false;
     }
-    console.error("or not here");
+    console.log("game state does not exist");
     // not logged in so redirect to login page with the return url
     return true;
   }
