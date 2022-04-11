@@ -29,19 +29,23 @@ const jwtOptions = { algorithm: 'RS256', expiresIn: '24h' };
 
 var app = express().use(cors({}));
 
+const GAMES_COLLECTION_NAME = 'games';
+
+const TOKEN_PARAMETER = "token";
+const GAME_ID_PARAMETER = "gameId";
+const USER_ID_PARAMETER = "userId";
+
 app.post('/createGame', async (req, res) => {
 
     // console.log(req);
-    if (Object.keys(req.query).length == 2 && req.query["token"].length > 0 && req.query["userId"] != null) {
-        var userId = parseInt(req.query["userId"])
-        var token = req.query["token"]
+    if (Object.keys(req.query).length == 2 && req.query[TOKEN_PARAMETER].length > 0 && req.query[USER_ID_PARAMETER] != null) {
+        var userId = parseInt(req.query[USER_ID_PARAMETER])
+        var token = req.query[TOKEN_PARAMETER]
         var isValid = false
         var errMsg = "Creating new game for user:" + userId
         var gameState = null
         try {
-            console.log("verifying user token")
-            isValid = jwt.verify(token, webappCert, jwtOptions).userId == userId;
-            console.log("verified user token")
+            isValid = validateToken(isValid, token, userId);
 
             if (isValid) {
                 // configure the initial game
@@ -54,7 +58,7 @@ app.post('/createGame', async (req, res) => {
                 gameState['lastModified'] = new Date()
 
                 // insert the game
-                const dbState = await database.collection('games').insertOne(gameState)
+                const dbState = await database.collection(GAMES_COLLECTION_NAME).insertOne(gameState)
                 if (!dbState['acknowledged']) {
                     throw 'the game was not inserted'
                 }
@@ -81,33 +85,37 @@ app.post('/createGame', async (req, res) => {
     }
 });
 
+const MOVE_TIME_LIMIT_MILISECONDS = 100000;
 app.post('/gameState', async (req, res) => {
-    if (Object.keys(req.query).length == 3 && req.query["gameId"] != null && req.query["token"].length > 0 && req.query["userId"] != null) {
-        var userId = req.query["userId"]
-        var token = req.query["token"]
-        var gameIdParam = ObjectId(req.query["gameId"])
+    if (Object.keys(req.query).length == 3 && req.query[GAME_ID_PARAMETER] != null && ObjectId.isValid(req.query[GAME_ID_PARAMETER]) && req.query[TOKEN_PARAMETER].length > 0 && req.query[USER_ID_PARAMETER] != null) {
+        var userId = req.query[USER_ID_PARAMETER]
+        var token = req.query[TOKEN_PARAMETER]
+        var gameIdParam = ObjectId(req.query[GAME_ID_PARAMETER])
         var isValid = false
-        var errMsg = "Failed to verify user retrieving game state, user:" + userId + " gameId:" + gameIdParam
+        var errMsg = "Failed to verify user retrieving game state, user:" + userId
         var gameState = null
         // initialize the winner user id
-        var winner = userId
-
+        var winner = null
+        
         try {
-            console.log("verifying user token")
-            isValid = jwt.verify(token, webappCert, jwtOptions).userId == userId;
-            console.log("verified user token")
+
+            isValid = validateToken(isValid, token, userId);
             // load the game state from the database
-            gameState = await database.collection('games').findOne({ _id: gameIdParam })
+            gameState = await database.collection(GAMES_COLLECTION_NAME).findOne({ _id: gameIdParam })
             // if the last player has not moved in 20 seconds - make the other player the winner
-            if (gameState['current_player'] == userId) {
-                winner = gameState['current_player']
+            if (gameState['current_player'] != null && gameState['w_player'] != null) {
+                console.log('game has started - verifying time taken')
+                console.log('current_player: ' + gameState['current_player'] + " called by: " + userId)
+                // call the function to determine the winner if the game has timed-out
+                winner = determineTimedOutWinner(gameState, userId, winner);
+                // update the game database entry if the last time the game was modified was more than 1 seconds ago
+                var dbState = await database.collection(GAMES_COLLECTION_NAME).updateOne(timeOutFilter(gameIdParam), timeOutUpdates(winner))
+                if (!dbState['acknowledged'] || dbState['matchedCount'] > 0) {
+                    console.log('winner of game: ' + gameIdParam + " is user:" + winner + " \nthe game timed out")
+                    console.log('a user timed out moves for a game ' + gameIdParam)
+                }
             }
-            // update the game database entry if the last time the game was modified was more than 20 seconds ago
-            var dbState = await database.collection('games').updateOne({ _id: gameIdParam, winner_player: { $eq: null } , lastModified: { $lt: new Date(new Date() - 20000) } }, { $set: { winner_player: winner } })
-            if (!dbState['acknowledged'] || dbState['matchedCount'] > 0) {
-                console.log('a user timed out moves for a game ' + gameIdParam)
-            }
-            gameState = await database.collection('games').findOne({ _id: gameIdParam })
+            gameState = await database.collection(GAMES_COLLECTION_NAME).findOne({ _id: gameIdParam })
         } catch (e) {
             console.error(errMsg)
             console.error(e)
@@ -138,26 +146,25 @@ app.post('/submitMove', async (req, res) => {
     const toColumnId = req.query["toColumnId"];
     const toRowId = req.query["toRowId"];
     // validate the parameters
-    if (Object.keys(req.query).length == 7 && req.query["gameId"] != null && req.query["token"].length > 0 && req.query["userId"] != null
+    if (Object.keys(req.query).length == 7 && req.query[GAME_ID_PARAMETER] != null && req.query[TOKEN_PARAMETER].length > 0 && req.query[USER_ID_PARAMETER] != null
         && validateMove(fromColumnId, fromRowId, toColumnId, toRowId)) {
         // game identifiers
-        var userId = req.query["userId"]
-        var token = req.query["token"]
-        var gameIdParam = ObjectId(req.query["gameId"])
+        var gameIdParam = ObjectId(req.query[GAME_ID_PARAMETER])
+        var userId = req.query[USER_ID_PARAMETER]
+        var token = req.query[TOKEN_PARAMETER]
         // move status
         var isValid = false
-        var errMsg = "Failed to verify user retrieving game state, user:" + userId + " gameId:" + gameIdParam
+        var errMsg = "Failed to verify user retrieving game state, user:" + userId
         var gameState = null
-
+        
         try {
-            console.log("verifying user token")
-            isValid = jwt.verify(token, webappCert, jwtOptions).userId == userId;
-            console.log("verified user token")
+
+            isValid = validateToken(isValid, token, userId);
 
             // if valid token continue with move update
             if (isValid) {
                 // load the game state from the database
-                gameState = await database.collection('games').findOne({ _id: gameIdParam })
+                gameState = await database.collection(GAMES_COLLECTION_NAME).findOne({ _id: gameIdParam })
                 if (gameState == null) {
                     console.log('game not found')
                     throw 'game not found; gameId:' + gameIdParam
@@ -175,27 +182,29 @@ app.post('/submitMove', async (req, res) => {
                 // validate the movement
                 console.log('validating movement of piece: ' + prevPiece)
                 const chessBoard = Chess.Chess(gameState['fenState']);
-                isValid = chessBoard.move({ from: fromColumnId.toLocaleLowerCase() + '' + fromRowId, to: toColumnId.toLocaleLowerCase() + '' + toRowId }) != null
+                isValid = makeBoardMove(chessBoard, fromColumnId, fromRowId, toColumnId, toRowId) != null
                 if (isValid) {
                     // if the movement is valid update the db entry
                     console.log('valid movement of piece: ' + prevPiece)
                     // check if the game has been won
                     var winner = null
+                    var won_by = null
                     if (chessBoard.in_checkmate()) {
                         // if so set the winner id and update the db entry and game state object
                         winner = userId;
+                        won_by = 'Checkmate'
                     }
                     // update the database entry
-                    var dbState = await database.collection('games').updateOne({ _id: gameIdParam, winner_player: null }, { $set: { fenState: chessBoard.fen(), state: gameState['state'], current_player: newCurrentUserId, lastModified: new Date(), winner_player: winner } })
+                    var dbState = await database.collection(GAMES_COLLECTION_NAME).updateOne(checkmateFilter(gameIdParam), checkmateUpdates(chessBoard, gameState, newCurrentUserId, winner))
                     // verify if the game has been updated
                     if (!dbState['acknowledged']) {
                         throw 'the game was not updated'
                     } else {
-                        if(dbState['matchedCount'] == 0){
+                        if (dbState['matchedCount'] == 0) {
                             console.log('game was not updated - but the query was acknowledged - the game must have finished')
                         }
                         // reload the game state to return to the app
-                        gameState = await database.collection('games').findOne({ _id: gameIdParam })
+                        gameState = await database.collection(GAMES_COLLECTION_NAME).findOne(simpleGameIdFilter(gameIdParam))
                     }
                 } else {
                     console.log('invalid movement of piece: ' + prevPiece)
@@ -224,19 +233,17 @@ app.post('/submitMove', async (req, res) => {
 });
 
 app.get('/getAllGames', async (req, res) => {
-    if (Object.keys(req.query).length == 2 && req.query["token"].length > 0 && req.query["userId"] != null) {
-        var userId = req.query["userId"]
-        var token = req.query["token"]
+    if (Object.keys(req.query).length == 2 && req.query[TOKEN_PARAMETER].length > 0 && req.query[USER_ID_PARAMETER] != null) {
+        var userId = req.query[USER_ID_PARAMETER]
+        var token = req.query[TOKEN_PARAMETER]
         var isValid = false
         var errMsg = "Failed to get all games, user:" + userId
         var gameStates = {}
 
         try {
-            console.log("verifying user token")
-            isValid = jwt.verify(token, webappCert, jwtOptions).userId == userId;
-            console.log("verified user token")
+            isValid = validateToken(isValid, token, userId);
             // load the game state from the database
-            gameStates = await database.collection('games').find({ w_player: -1 }, { limit: numGamesReturnedLimit, sort: ['creationDate'] }).toArray()
+            gameStates = await database.collection(GAMES_COLLECTION_NAME).find(allGameFilter(), allGameConfig()).toArray()
         } catch (e) {
             console.error(errMsg)
             console.error(e)
@@ -260,27 +267,26 @@ app.get('/getAllGames', async (req, res) => {
 });
 
 app.post('/joinGame', async (req, res) => {
-    if (Object.keys(req.query).length == 3 && req.query["token"].length > 0 && req.query["gameId"] != null && req.query["userId"] != null) {
-        var userId = req.query["userId"]
-        var token = req.query["token"]
-        var gameIdParam = ObjectId(req.query["gameId"])
+    if (Object.keys(req.query).length == 3 && req.query[TOKEN_PARAMETER].length > 0 && req.query[GAME_ID_PARAMETER] != null && req.query[USER_ID_PARAMETER] != null) {
+        var userId = req.query[USER_ID_PARAMETER]
+        var token = req.query[TOKEN_PARAMETER]
+        var gameIdParam = ObjectId(req.query[GAME_ID_PARAMETER])
         var isValid = false
         var errMsg = "Failed to join game, user:" + userId
         var gameFound = null
-
+        
         try {
-            console.log("verifying user token")
-            isValid = jwt.verify(token, webappCert, jwtOptions).userId == userId;
-            console.log("verified user token")
+
+            isValid = validateToken(isValid, token, userId);
             // filter by game and by ones that still have the w_player as -1 - game not started
-            var dbState = await database.collection('games').updateOne({ _id: gameIdParam, w_player: -1 }, { $set: { w_player: userId } })
+            var dbState = await database.collection(GAMES_COLLECTION_NAME).updateOne({ _id: gameIdParam, w_player: -1 }, { $set: { w_player: userId } })
             // check if by the time we update the db entry, another user has not updated the same entry
             if (!dbState['acknowledged'] || dbState['matchedCount'] == 0) {
                 throw 'the game was not updated - game must have have already started'
             } else {
                 // successfull updated game, return the game to the user
                 console.log('updated game... user joining game')
-                gameFound = await database.collection('games').findOne({ _id: gameIdParam })
+                gameFound = await database.collection(GAMES_COLLECTION_NAME).findOne({ _id: gameIdParam })
             }
         } catch (e) {
             console.error(errMsg)
@@ -304,35 +310,41 @@ app.post('/joinGame', async (req, res) => {
     }
 });
 
-
 app.post('/quitGame', async (req, res) => {
-    if (Object.keys(req.query).length == 3 && req.query["token"].length > 0 && req.query["gameId"] != null && req.query["userId"] != null) {
-        var userId = req.query["userId"]
-        var token = req.query["token"]
-        var gameIdParam = ObjectId(req.query["gameId"])
+    if (Object.keys(req.query).length == 3 && req.query[TOKEN_PARAMETER].length > 0 && req.query[GAME_ID_PARAMETER] != null && req.query[USER_ID_PARAMETER] != null) {
+        var userId = req.query[USER_ID_PARAMETER]
+        var token = req.query[TOKEN_PARAMETER]
+        var gameIdParam = ObjectId(req.query[GAME_ID_PARAMETER])
         var isValid = false
         var errMsg = "Failed to join game, user:" + userId
-        var gameFound = null
-
+        var gameState = null
+        
         try {
-            console.log("verifying user token")
-            isValid = jwt.verify(token, webappCert, jwtOptions).userId == userId;
-            console.log("verified user token")
-            // filter by game and by ones that still have the w_player as -1 - game not started
-            var dbState = await database.collection('games').deleteOne({ _id: gameIdParam, w_player: -1 }, { $set: { w_player: userId } })
-            // check if by the time we update the db entry, another user has not updated the same entry
-            if (!dbState['acknowledged']) {
-                throw 'there was an error deleting an unstarted game'
-            } else if (dbState['matchedCount'] == 0) {
-                // get the other player's user id and set them as the winner
-                var winner = gameState['br_player']
-                if (gameState['br_player'] == userId) {
-                    winner = gameState['w_player']
-                }
 
-                console.log('updating game - user ' + userId + '')
-                var dbState = await database.collection('games').updateOne({ _id: gameIdParam, winner_player: { $eq: null } }, { $set: { winner_player: winner } })
-            } else {
+            isValid = validateToken(isValid, token, userId);
+            // filter by game and by ones that still have the w_player as -1 - game not started
+            gameState = await database.collection(GAMES_COLLECTION_NAME).deleteOne(deleteExistingUnstartedGameFilter(gameIdParam))
+            // check if by the time we update the db entry, another user has not updated the same entry
+            if (!gameState['acknowledged']) {
+                throw 'there was an error deleting an unstarted game'
+            } else if (gameState['deletedCount'] == 0) {
+                console.log('user:' + userId + ' quit the game and the game has started')
+                // get the other player's user id and set them as the winner
+                // load the game
+                gameState = await database.collection(GAMES_COLLECTION_NAME).findOne({ _id: gameIdParam })
+                if (gameState != null) {
+                    // determine the winner
+                    var winner = gameState['br_player']
+                    if (gameState['br_player'] == userId) {
+                        winner = gameState['w_player']
+                    }
+                    // update the game entry
+                    console.log('updating game - user ' + userId + '')
+                    gameState = await database.collection(GAMES_COLLECTION_NAME).updateOne(quitExistingGameFilter(gameIdParam), quitExistingGameUpdates(winner))
+                } else {
+                    throw 'the game does not exist anymore'
+                }
+            } else if (gameState['deletedCount'] > 0) {
                 console.log("game successfully deleted/quit before starting")
             }
         } catch (e) {
@@ -343,11 +355,11 @@ app.post('/quitGame', async (req, res) => {
             }
         } finally {
             // if the user was not validated return an error
-            if (!isValid || gameFound == null) {
+            if (!isValid || gameState == null) {
                 console.error(errMsg);
                 res.status(500).send(errMsg);
             } else {
-                res.status(200).json(gameStates)
+                res.status(200).json(null)
             }
         }
     } else {
@@ -397,6 +409,61 @@ client.connect().then(mClient => {
     console.log("ready to go");
 })
 
+function deleteExistingUnstartedGameFilter(gameIdParam) {
+    return { _id: gameIdParam, w_player: -1 };
+}
+
+// --------- Query filters, configs, and updates --------- //
+
+function quitExistingGameUpdates(winner) {
+    return { $set: { winner_player: winner, winner_by: 'Player quit' } };
+}
+
+function quitExistingGameFilter(gameIdParam) {
+    return { _id: gameIdParam, winner_player: { $eq: null } };
+}
+
+function allGameConfig() {
+    return { limit: numGamesReturnedLimit, sort: ['creationDate'] };
+}
+
+function allGameFilter() {
+    return { w_player: -1 };
+}
+
+function simpleGameIdFilter(gameIdParam) {
+    return { _id: gameIdParam };
+}
+
+function makeBoardMove(chessBoard, fromColumnId, fromRowId, toColumnId, toRowId) {
+    return chessBoard.move({ from: fromColumnId.toLocaleLowerCase() + '' + fromRowId, to: toColumnId.toLocaleLowerCase() + '' + toRowId });
+}
+
+function checkmateUpdates(chessBoard, gameState, newCurrentUserId, winner, won_by) {
+    return { $set: { fenState: chessBoard.fen(), state: gameState['state'], current_player: newCurrentUserId, lastModified: new Date(), winner_player: winner, winner_by: won_by } };
+}
+
+function checkmateFilter(gameIdParam) {
+    return { _id: gameIdParam, winner_player: null };
+}
+
+function timeOutUpdates(winner) {
+    return { $set: { winner_player: winner, winner_by: 'Player timed-out' } };
+}
+
+function timeOutFilter(gameIdParam) {
+    return { _id: gameIdParam, winner_player: { $eq: null }, lastModified: { $lt: new Date(new Date() - MOVE_TIME_LIMIT_MILISECONDS) } };
+}
+
+// --------- Helper methods --------- //
+
+function validateToken(isValid, token, userId) {
+    console.log("verifying user token");
+    isValid = jwt.verify(token, webappCert, jwtOptions).userId == userId;
+    console.log("verified user token");
+    return isValid;
+}
+
 function validatePieceMoved(prevPiece, userId, br_player_id, w_player_id, current_player_id) {
     const isBrPlayerMovingBrPiece = prevPiece.startsWith('br_') && br_player_id == userId;
     const isWPlayerMovingWPiece = prevPiece.startsWith('w_') && w_player_id == userId;
@@ -412,8 +479,8 @@ function validatePieceMoved(prevPiece, userId, br_player_id, w_player_id, curren
 }
 
 function updatePiece(gameState, fromRowId, fromColumnId, value) {
-    var val = gameState['state'][fromRowId - 1]['columns'][fromColumnId.charCodeAt(0) - 65]['piece']
-    gameState['state'][fromRowId - 1]['columns'][fromColumnId.charCodeAt(0) - 65]['piece'] = value
+    var val = gameState['state'][fromRowId - 1]['columns'][calcColumnId(fromColumnId)]['piece']
+    gameState['state'][fromRowId - 1]['columns'][calcColumnId(fromColumnId)]['piece'] = value
     return val
 }
 
@@ -427,4 +494,22 @@ function validateColumn(columnId) {
 
 function validateRow(rowId) {
     return rowId != null && rowId >= 1 && rowId <= 8
+}
+
+function determineTimedOutWinner(gameState, userId, winner) {
+    if (gameState['current_player'] != userId) {
+        winner = userId;
+    } else {
+        console.log('current_player: ' + gameState['current_player'] + " called by: " + userId);
+        if (gameState['br_player'] == userId) {
+            winner = gameState['w_player'];
+        } else {
+            winner = gameState['br_player'];
+        }
+    }
+    return winner;
+}
+
+function calcColumnId(fromColumnId) {
+    return fromColumnId.charCodeAt(0) - 65;
 }

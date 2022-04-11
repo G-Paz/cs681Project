@@ -8,6 +8,7 @@ export class Game {
     public current_player: 1,
     public fenState: string,
     public winner_player: number,
+    public winner_by: string,
     public creationDate: Date,
     public state: Array<GameRow>
   ) {}

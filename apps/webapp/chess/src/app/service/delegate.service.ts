@@ -3,9 +3,6 @@ import { Injectable } from "@angular/core";
 import { Router } from "@angular/router";
 import { BehaviorSubject } from "rxjs/internal/BehaviorSubject";
 import { Observable } from "rxjs/internal/Observable";
-import { EMPTY } from "rxjs/internal/observable/empty";
-import { catchError } from "rxjs/internal/operators/catchError";
-import { map } from "rxjs/internal/operators/map";
 import { environment } from "src/environments/environment";
 import { Game } from "../model/game/game";
 
@@ -34,6 +31,14 @@ export class DelegateService {
     this.games = this.allGames.asObservable();
   }
 
+  public get gameValue(): Game {
+    return this.gameSubject.value;
+  }
+
+  public get allGamesValue(): Array<Game> {
+    return this.allGames.value;
+  }
+
   getGameState(gameId: number, token: string, userId: number) {
     console.log("getting game state");
     return this.http
@@ -47,8 +52,7 @@ export class DelegateService {
       .subscribe(
         (res) => {
           // store user details and jwt token in local storage to keep user logged in between page refreshes
-          sessionStorage.setItem("game", JSON.stringify(res));
-          this.gameSubject.next(res);
+          this.setGame(res);
           return res;
         },
         (error) => {
@@ -66,8 +70,7 @@ export class DelegateService {
       })
       .subscribe((res) => {
         // store user details and jwt token in local storage to keep user logged in between page refreshes
-        sessionStorage.setItem("game", JSON.stringify(res));
-        this.gameSubject.next(res);
+        this.setGame(res);
         return res;
       });
   }
@@ -96,10 +99,9 @@ export class DelegateService {
       })
       .subscribe(
         (res) => {
-          console.error(res);
+          console.log(res);
           // store user details and jwt token in local storage to keep user logged in between page refreshes
-          sessionStorage.setItem("game", JSON.stringify(res));
-          this.gameSubject.next(res);
+          this.setGame(res);
           this.gameStatus.next("");
           return res;
         },
@@ -144,8 +146,7 @@ export class DelegateService {
         (res) => {
           console.error(res);
           // store user details and jwt token in local storage to keep user logged in between page refreshes
-          sessionStorage.setItem("game", JSON.stringify(res));
-          this.gameSubject.next(res);
+          this.setGame(res);
           this.gameStatus.next("");
           complete()
           return res;
@@ -159,7 +160,7 @@ export class DelegateService {
 
   quitGame(gameId: number, userId: number, token: string) {
     this.http
-      .post<Game>(`${environment.delegateUrl}/quitGame`, null, {
+      .post<any>(`${environment.delegateUrl}/quitGame`, null, {
         headers: new HttpHeaders(),
         params: new HttpParams()
           .set("gameId", gameId)
@@ -169,6 +170,7 @@ export class DelegateService {
       .subscribe(
         (res) => {
           console.log("successfully quit game");
+          this.removeGame(res);
           return res;
         },
         (error) => {
@@ -180,10 +182,10 @@ export class DelegateService {
   }
 
   localQuitGame() {
+    this.router.navigate(["/"]);
     sessionStorage.removeItem("game");
     this.gameSubject.next(null);
     this.gameStatus.next("");
-    this.router.navigate(["/"]);
   }
 
   logout(gameId: number, userId: number, token: string) {
@@ -194,11 +196,13 @@ export class DelegateService {
     }
   }
 
-  public get gameValue(): Game {
-    return this.gameSubject.value;
+  private removeGame(res: any) {
+    sessionStorage.removeItem("game");
+    this.gameSubject.next(null);
   }
 
-  public get allGamesValue(): Array<Game> {
-    return this.allGames.value;
+  private setGame(res: Game) {
+    sessionStorage.setItem("game", JSON.stringify(res));
+    this.gameSubject.next(res);
   }
 }

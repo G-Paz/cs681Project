@@ -64,9 +64,19 @@
           <span>Waiting for an opponent...</span>
         </div>
       </div>
+      <div *ngIf="inGame() && !isUsersTurn() && !isGameDone()">
+        <div class="serverMessage">
+          <span>Waiting for opponent to make move.</span>
+        </div>
+      </div>
       <div *ngIf="hasUserWon()">
         <div class="serverMessage">
-          <span>You won!</span>
+          <span>You won! :) {{gameState.winner_by}}</span>
+        </div>
+      </div>
+      <div *ngIf="isGameDone() && !hasUserWon()">
+        <div class="serverMessage">
+          <span>You lost :(</span>
         </div>
       </div>
     </form>

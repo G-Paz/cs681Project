@@ -7,6 +7,7 @@ import { GameColumn } from "src/app/model/game/state/game-column";
 import { DelegateService } from "src/app/service/delegate.service";
 import { IamService } from "src/app/service/iam.service";
 
+const REFRESH_RATE_MILISECONDS = 10000;
 @Component({
   selector: "app-game-state",
   templateUrl: "./game-state.component.html",
@@ -23,22 +24,26 @@ export class GameStateComponent implements OnInit {
   constructor(
     private delegateService: DelegateService,
     private iamService: IamService,
-    private formBuilder: FormBuilder,
-    private router: Router
+    private formBuilder: FormBuilder
   ) {
     // initialze the board ids
     this.columnIds = new Array<number>(1, 2, 3, 4, 5, 6, 7, 8);
     this.rowIds = new Array<number>(8, 7, 6, 5, 4, 3, 2, 1);
     // set the game state watcher
-    this.delegateService.game.subscribe((x) => (this.gameState = x));
+    this.delegateService.game.subscribe(
+      (gameState) => (this.gameState = gameState)
+    );
     this.gameState = this.delegateService.gameValue;
     // set the game status watcher
-    this.delegateService.status.subscribe((x) => (this.serverMessage = x));
+    this.delegateService.status.subscribe(
+      (statusMessage) => (this.serverMessage = statusMessage)
+    );
     // init to be replaced in ngOnInit
     this.serverMessage = "";
     // initialize game refresh
-    this.refreshGame = interval(10000).subscribe((val) => {
+    this.refreshGame = interval(REFRESH_RATE_MILISECONDS).subscribe((int) => {
       if (this.isGameDone()) {
+        console.error("game is done - unsubscribing");
         this.refreshGame.unsubscribe();
       } else {
         this.initGame();
@@ -88,6 +93,7 @@ export class GameStateComponent implements OnInit {
   quitGame() {
     var user = this.iamService.userValue;
     this.delegateService.quitGame(this.gameState._id, user.id, user.token);
+    this.stopRefresh();
   }
 
   isGameDone() {
@@ -97,18 +103,20 @@ export class GameStateComponent implements OnInit {
   }
 
   exitGame() {
-    if(!this.refreshGame.closed){
-      this.refreshGame.unsubscribe()
+    this.stopRefresh();
+    this.delegateService.localQuitGame();
+  }
+
+  stopRefresh() {
+    if (!this.refreshGame.closed) {
+      console.error("unsubscribing refreshing action");
+      this.refreshGame.unsubscribe();
     }
-    this.delegateService.localQuitGame()
   }
 
   hasUserWon() {
     var user = this.iamService.userValue;
-
-    console.log('the winner is' + this.gameState.winner_player);
-
-    console.log('the player is' + user.id);
+    console.log("the player is" + user.id);
     return (
       this.gameState != undefined && this.gameState.winner_player == user.id
     );
