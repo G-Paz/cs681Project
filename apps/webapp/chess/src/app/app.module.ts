@@ -16,13 +16,13 @@ import { FindGameComponent } from './view/find-game/find-game.component';
     LoginComponent,
     CreateaccountComponent,
     GameStateComponent,
-    FindGameComponent,
+    FindGameComponent
   ],
   imports: [
     HttpClientModule,
     BrowserModule,
     AppRoutingModule,
-    ReactiveFormsModule,
+    ReactiveFormsModule
   ],
   providers: [],
   bootstrap: [AppComponent]
