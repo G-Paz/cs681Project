@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Game</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body class="w3-light-grey">
+  <div class="formContainer">
+    <form id="gameForm">
+      <div>
+        <div>
+          <div>
+            <span>Username: {{user.username}}</span>
+          </div>
+          <div>
+            <span>Wins: {{profile.wins}}</span>
+          </div>
+          <div>
+            <span>Losses: {{profile.losses}}</span>
+          </div>
+        </div>
+      </div>
+      <div class="w3-margin-top">
+        TOP PLAYERS
+      </div>
+      <div *ngFor="let topPlayer of getTopPlayers()">
+        <div>
+          <span>username: {{topPlayer.username}}</span> | 
+          <span>wins: {{topPlayer.wins}}</span> | 
+          <span>losses: {{topPlayer.losses}}</span>
+        </div>
+      </div>
+      <div class="w3-center w3-margin-top w3-margin-bottom">
+        <button type="submit" (click)="returnHome()">Return</button>
+      </div>
+    </form>
+  </div>
+</body>
+
+</html>

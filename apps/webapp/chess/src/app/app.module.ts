@@ -8,6 +8,7 @@ import { LoginComponent } from './view/login/login.component';
 import { CreateaccountComponent } from './view/createaccount/createaccount.component';
 import { GameStateComponent } from './view/game-state/game-state.component';
 import { FindGameComponent } from './view/find-game/find-game.component';
+import { ProfileComponent } from './view/profile/profile.component';
 
 
 @NgModule({
@@ -16,7 +17,8 @@ import { FindGameComponent } from './view/find-game/find-game.component';
     LoginComponent,
     CreateaccountComponent,
     GameStateComponent,
-    FindGameComponent
+    FindGameComponent,
+    ProfileComponent
   ],
   imports: [
     HttpClientModule,

@@ -41,7 +41,8 @@ export class FindGameComponent implements OnInit {
 
   joinGame(game: Game){
     var user = this.iamService.userValue;
-    this.delegateService.joinGame(game._id, user.id, user.token, () => {
+    this.delegateService.joinGame(game._id, user.id, user.token,
+      user.username, () => {
       this.router.navigate(["/gamestate"]);
     });
   }

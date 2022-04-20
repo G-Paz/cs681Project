@@ -34,13 +34,15 @@ const GAMES_COLLECTION_NAME = 'games';
 const TOKEN_PARAMETER = "token";
 const GAME_ID_PARAMETER = "gameId";
 const USER_ID_PARAMETER = "userId";
+const USERNAME_PARAMETER = "username";
 
 app.post('/createGame', async (req, res) => {
-
-    // console.log(req);
-    if (Object.keys(req.query).length == 2 && req.query[TOKEN_PARAMETER].length > 0 && req.query[USER_ID_PARAMETER] != null) {
+    console.log("creating game" + req.body)
+    if (Object.keys(req.query).length == 3 && req.query[TOKEN_PARAMETER].length > 0 && req.query[USER_ID_PARAMETER] != null
+        && req.query[USERNAME_PARAMETER] != null) {
         var userId = parseInt(req.query[USER_ID_PARAMETER])
         var token = req.query[TOKEN_PARAMETER]
+        var username = req.query[USERNAME_PARAMETER]
         var isValid = false
         var errMsg = "Creating new game for user:" + userId
         var gameState = null
@@ -51,7 +53,9 @@ app.post('/createGame', async (req, res) => {
                 // configure the initial game
                 gameState = Object.assign({}, queries.INIT_GAME_STATE_TEMPLATE_JSON)
                 gameState['br_player'] = userId
+                gameState['br_player_username'] = username
                 gameState['w_player'] = -1
+                gameState['w_player_username'] = -1
                 gameState['current_player'] = userId
                 gameState['fenState'] = Chess.Chess().fen()
                 gameState['creationDate'] = new Date()
@@ -87,6 +91,7 @@ app.post('/createGame', async (req, res) => {
 
 const MOVE_TIME_LIMIT_MILISECONDS = 100000;
 app.post('/gameState', async (req, res) => {
+    console.error("getting game state" + req)
     if (Object.keys(req.query).length == 3 && req.query[GAME_ID_PARAMETER] != null && ObjectId.isValid(req.query[GAME_ID_PARAMETER]) && req.query[TOKEN_PARAMETER].length > 0 && req.query[USER_ID_PARAMETER] != null) {
         var userId = req.query[USER_ID_PARAMETER]
         var token = req.query[TOKEN_PARAMETER]
@@ -96,7 +101,7 @@ app.post('/gameState', async (req, res) => {
         var gameState = null
         // initialize the winner user id
         var winner = null
-        
+
         try {
 
             isValid = validateToken(isValid, token, userId);
@@ -146,17 +151,18 @@ app.post('/submitMove', async (req, res) => {
     const toColumnId = req.query["toColumnId"];
     const toRowId = req.query["toRowId"];
     // validate the parameters
-    if (Object.keys(req.query).length == 7 && req.query[GAME_ID_PARAMETER] != null && req.query[TOKEN_PARAMETER].length > 0 && req.query[USER_ID_PARAMETER] != null
+    if (Object.keys(req.query).length == 8 && req.query[GAME_ID_PARAMETER] != null && req.query[USERNAME_PARAMETER] != null && req.query[TOKEN_PARAMETER].length > 0 && req.query[USER_ID_PARAMETER] != null
         && validateMove(fromColumnId, fromRowId, toColumnId, toRowId)) {
         // game identifiers
         var gameIdParam = ObjectId(req.query[GAME_ID_PARAMETER])
         var userId = req.query[USER_ID_PARAMETER]
         var token = req.query[TOKEN_PARAMETER]
+        var username = req.query[USERNAME_PARAMETER]
         // move status
         var isValid = false
         var errMsg = "Failed to verify user retrieving game state, user:" + userId
         var gameState = null
-        
+
         try {
 
             isValid = validateToken(isValid, token, userId);
@@ -178,6 +184,9 @@ app.post('/submitMove', async (req, res) => {
                 // udpdate the game piece
                 updatePiece(gameState, toRowId, toColumnId, prevPiece)
                 console.log('moving piece: ' + prevPiece)
+
+                updateHistory(gameState, userId, username, fromRowId, fromColumnId, toRowId, toColumnId);
+                console.log('history updated')
 
                 // validate the movement
                 console.log('validating movement of piece: ' + prevPiece)
@@ -233,6 +242,7 @@ app.post('/submitMove', async (req, res) => {
 });
 
 app.get('/getAllGames', async (req, res) => {
+    console.log("getting all games")
     if (Object.keys(req.query).length == 2 && req.query[TOKEN_PARAMETER].length > 0 && req.query[USER_ID_PARAMETER] != null) {
         var userId = req.query[USER_ID_PARAMETER]
         var token = req.query[TOKEN_PARAMETER]
@@ -267,19 +277,20 @@ app.get('/getAllGames', async (req, res) => {
 });
 
 app.post('/joinGame', async (req, res) => {
-    if (Object.keys(req.query).length == 3 && req.query[TOKEN_PARAMETER].length > 0 && req.query[GAME_ID_PARAMETER] != null && req.query[USER_ID_PARAMETER] != null) {
-        var userId = req.query[USER_ID_PARAMETER]
+    if (Object.keys(req.query).length == 4 && req.query[TOKEN_PARAMETER].length > 0 && req.query[GAME_ID_PARAMETER] != null && req.query[USERNAME_PARAMETER] != null && req.query[USER_ID_PARAMETER] != null) {
+        var userId = parseInt(req.query[USER_ID_PARAMETER])
         var token = req.query[TOKEN_PARAMETER]
+        var username = req.query[USERNAME_PARAMETER]
         var gameIdParam = ObjectId(req.query[GAME_ID_PARAMETER])
         var isValid = false
         var errMsg = "Failed to join game, user:" + userId
         var gameFound = null
-        
+
         try {
 
             isValid = validateToken(isValid, token, userId);
             // filter by game and by ones that still have the w_player as -1 - game not started
-            var dbState = await database.collection(GAMES_COLLECTION_NAME).updateOne({ _id: gameIdParam, w_player: -1 }, { $set: { w_player: userId } })
+            var dbState = await database.collection(GAMES_COLLECTION_NAME).updateOne({ _id: gameIdParam, w_player: -1 }, { $set: { w_player: userId, w_player_username: username } })
             // check if by the time we update the db entry, another user has not updated the same entry
             if (!dbState['acknowledged'] || dbState['matchedCount'] == 0) {
                 throw 'the game was not updated - game must have have already started'
@@ -318,7 +329,7 @@ app.post('/quitGame', async (req, res) => {
         var isValid = false
         var errMsg = "Failed to join game, user:" + userId
         var gameState = null
-        
+
         try {
 
             isValid = validateToken(isValid, token, userId);
@@ -369,6 +380,105 @@ app.post('/quitGame', async (req, res) => {
     }
 });
 
+app.post('/getGameProfile', async (req, res) => {
+    if (Object.keys(req.query).length == 2 && req.query[TOKEN_PARAMETER].length > 0 && req.query[USER_ID_PARAMETER] != null) {
+        var userId = parseInt(req.query[USER_ID_PARAMETER])
+        var token = req.query[TOKEN_PARAMETER]
+        var isValid = false
+        var errMsg = "Failed to get all games, user:" + userId
+        var gamesWon = null
+        var gamesLostAsBr = null
+        var gamesLostAsW = null
+        var profile = null
+
+        try {
+            isValid = validateToken(isValid, token, userId);
+
+            var topPlayers  = await database
+                .collection(GAMES_COLLECTION_NAME)
+                .aggregate([{ $project: { _id: false, winner_player: 1 } }
+                    , { $group: { _id: '$winner_player', count: { $sum: 1 } } }
+                    , { $sort: { count: -1 } }
+                    , { $limit: 2 }]).toArray()
+            const topPlayerIds = extractIds(topPlayers)
+            
+            var topPlayerWName = await database
+            .collection(GAMES_COLLECTION_NAME)
+            .find({w_player: { $in: topPlayerIds }})
+            .project({ w_player: 1, w_player_username: 1 }).toArray()
+
+            var topPlayerBrName = await database
+            .collection(GAMES_COLLECTION_NAME)
+            .find({ br_player: { $in: topPlayerIds }})
+            .project({ br_player: 1, br_player_username: 1 }).toArray()
+
+            var topPlayerLosesAsW = await database.collection(GAMES_COLLECTION_NAME)
+                .aggregate([{
+                    $project: {
+                        _id: {
+                            $cond: {
+                                if: { $ne: ["$w_player", "$winner_player"] }
+                                , then: '$w_player'
+                                , else: "$$REMOVE"
+                            }
+                        },
+                        username: '$w_player_username'
+                    }
+                }
+                    , { $match: { _id: { $in: topPlayerIds } } }
+                    , { $group: { _id: '$_id', count: { $sum: 1 } } }]).toArray()
+            var topPlayerLosesAsBr = await database.collection(GAMES_COLLECTION_NAME)
+                .aggregate([{
+                    $project: {
+                        _id: {
+                            $cond: {
+                                if: { $ne: ["$br_player", "$winner_player"] }
+                                , then: '$br_player'
+                                , else: "$$REMOVE"
+                            }
+                        },
+                        username: '$br_player_username'
+                    }
+                }
+                    , { $match: { _id: { $in: topPlayerIds } } }
+                    , { $group: { _id: '$_id', count: { $sum: 1 } } }]).toArray()
+
+            const topPlayerProfiles = configureTopPlayerProfiles(topPlayerLosesAsBr, topPlayerLosesAsW, topPlayers, topPlayerWName, topPlayerBrName)
+
+            // load the game state from the database
+            gamesWon = await database.collection(GAMES_COLLECTION_NAME).countDocuments(allSingleUserGamesWon(userId))
+            gamesLostAsBr = await database.collection(GAMES_COLLECTION_NAME).countDocuments(allSingleUserGamesLostAsBr(userId))
+            gamesLostAsW = await database.collection(GAMES_COLLECTION_NAME).countDocuments(allSingleUserGamesLostAsW(userId))
+
+            profile = {
+                userId: userId,
+                wins: gamesWon,
+                losses: gamesLostAsBr + gamesLostAsW,
+                topPlayers: topPlayerProfiles
+            }
+
+        } catch (e) {
+            console.error(errMsg)
+            console.error(e)
+            if (e.name == 'TokenExpiredError') {
+                errMsg = "Token is expired."
+            }
+        } finally {
+            // if the user was not validated return an error
+            if (!isValid || profile == null) {
+                console.error(errMsg);
+                res.status(500).send(errMsg);
+            } else {
+                res.status(200).json(profile)
+            }
+        }
+    } else {
+        console.error(errMsg);
+        console.error("Invalid parameters.");
+        res.status(500).send("There was an error.");
+    }
+});
+
 // configure and start the server
 // get server hostname and port from config
 const server_hostname = config.web.hostname;
@@ -409,11 +519,36 @@ client.connect().then(mClient => {
     console.log("ready to go");
 })
 
+function updateHistory(gameState, userId, username, fromRowId, fromColumnId, toRowId, toColumnId) {
+    gameState['history'].push(
+        {
+            "userId": userId
+            , "username": username
+            , "fromRowId": fromRowId
+            , "fromColumnId": fromColumnId
+            , "toRowId": toRowId
+            , "toColumnId": toColumnId
+        }
+    )
+}
+
 function deleteExistingUnstartedGameFilter(gameIdParam) {
     return { _id: gameIdParam, w_player: -1 };
 }
 
 // --------- Query filters, configs, and updates --------- //
+
+function allSingleUserGamesWon(userId) {
+    return { winner_player: userId };
+}
+
+function allSingleUserGamesLostAsW(userId) {
+    return { w_player: { $eq: userId }, winner_player: { $ne: userId }}
+}
+
+function allSingleUserGamesLostAsBr(userId) {
+    return { br_player: { $eq: userId }, winner_player: { $ne: userId }}
+}
 
 function quitExistingGameUpdates(winner) {
     return { $set: { winner_player: winner, winner_by: 'Player quit' } };
@@ -456,6 +591,56 @@ function timeOutFilter(gameIdParam) {
 }
 
 // --------- Helper methods --------- //
+
+function configureTopPlayerProfiles(topPlayerLosesAsBr, topPlayerLosesAsW, topPlayerIds, topPlayerWName, topPlayerBrName) {
+    const profiles = {}
+
+    topPlayerIds.forEach(element => {
+        profiles[element['_id']] = {
+            userId: element['_id'],
+            wins: element['count'],
+            username: null,
+            losses: 0,
+            topPlayerIds: []
+        };
+    });
+    
+    topPlayerWName.forEach(element => {
+        if (profiles[element['w_player']] != null) {
+            profiles[element['w_player']].username = element['w_player_username']
+        }
+    });
+    
+    topPlayerBrName.forEach(element => {
+        if (profiles[element['br_player']] != null) {
+            profiles[element['br_player']].username = element['br_player_username']
+        }
+    });
+    
+    topPlayerLosesAsBr.forEach(element => {
+        if (profiles[element['_id']] != null) {
+            profiles[element['_id']].loses += element['count']
+        }
+    });
+
+    topPlayerLosesAsW.forEach(element => {
+        if (profiles[element['_id']] != null) {
+            profiles[element['_id']].loses += element['count']
+        }
+    });
+    let array = [];
+    Object.values(profiles).forEach(v => array.push(v));
+    return array
+}
+
+function extractIds(topPlayers) {
+    const ids = []
+    topPlayers.forEach(element => {
+        ids.push(element['_id'])
+    });
+    return ids
+}
+
 
 function validateToken(isValid, token, userId) {
     console.log("verifying user token");

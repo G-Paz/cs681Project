@@ -6,6 +6,7 @@ import { CreateaccountComponent } from './view/createaccount/createaccount.compo
 import { FindGameComponent } from './view/find-game/find-game.component';
 import { GameStateComponent } from './view/game-state/game-state.component';
 import { LoginComponent } from './view/login/login.component';
+import { ProfileComponent } from './view/profile/profile.component';
 
 const routes: Routes = [
   {
@@ -19,6 +20,11 @@ const routes: Routes = [
   {
     path: "gamestate",
     component: GameStateComponent,
+    canActivate:[LinkGuard]
+  },
+  {
+    path: "profile",
+    component: ProfileComponent,
     canActivate:[LinkGuard]
   },
   {
