@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Game</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body class="w3-light-grey">
+  <div class="formContainer">
+    <table class="w3-table-all">
+      <thead>
+        <tr>
+          <th>Move</th>
+          <th>Username</th>
+          <th>From Row</th>
+          <th>From Column</th>
+          <th>To Row</th>
+          <th>To Column</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let history of getGameHistory(); let i = index;">
+          <td>{{i+1}}</td>
+          <td>{{history.username}}</td>
+          <td>{{history.fromRowId}}</td>
+          <td>{{history.fromColumnId}}</td>
+          <td>{{history.toRowId}}</td>
+          <td>{{history.toColumnId}}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+
+</html>

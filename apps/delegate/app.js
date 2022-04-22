@@ -52,10 +52,10 @@ app.post('/createGame', async (req, res) => {
             if (isValid) {
                 // configure the initial game
                 gameState = Object.assign({}, queries.INIT_GAME_STATE_TEMPLATE_JSON)
-                gameState['br_player'] = userId
-                gameState['br_player_username'] = username
-                gameState['w_player'] = -1
-                gameState['w_player_username'] = -1
+                gameState['w_player'] = userId
+                gameState['w_player_username'] = username
+                gameState['br_player'] = -1
+                gameState['br_player_username'] = -1
                 gameState['current_player'] = userId
                 gameState['fenState'] = Chess.Chess().fen()
                 gameState['creationDate'] = new Date()
@@ -93,7 +93,7 @@ const MOVE_TIME_LIMIT_MILISECONDS = 100000;
 app.post('/gameState', async (req, res) => {
     console.error("getting game state" + req)
     if (Object.keys(req.query).length == 3 && req.query[GAME_ID_PARAMETER] != null && ObjectId.isValid(req.query[GAME_ID_PARAMETER]) && req.query[TOKEN_PARAMETER].length > 0 && req.query[USER_ID_PARAMETER] != null) {
-        var userId = req.query[USER_ID_PARAMETER]
+        var userId = parseInt(req.query[USER_ID_PARAMETER])
         var token = req.query[TOKEN_PARAMETER]
         var gameIdParam = ObjectId(req.query[GAME_ID_PARAMETER])
         var isValid = false
@@ -112,12 +112,34 @@ app.post('/gameState', async (req, res) => {
                 console.log('game has started - verifying time taken')
                 console.log('current_player: ' + gameState['current_player'] + " called by: " + userId)
                 // call the function to determine the winner if the game has timed-out
-                winner = determineTimedOutWinner(gameState, userId, winner);
+                var winner_username = null
+                if (gameState['current_player'] != userId) {
+                    winner = userId;
+                    winner_username = gameState['br_player_username']
+                    if (winner != gameState['br_player']) {
+                        winner_username = gameState['w_player_username']
+                    }
+                } else {
+                    console.log('current_player: ' + gameState['current_player'] + " called by: " + userId);
+                    if (gameState['br_player'] == userId) {
+                        winner = gameState['w_player'];
+                        winner_username = gameState['w_player_username'];
+                    } else {
+                        winner = gameState['br_player'];
+                        winner_username = gameState['br_player_username'];
+                    }
+                }
+
                 // update the game database entry if the last time the game was modified was more than 1 seconds ago
-                var dbState = await database.collection(GAMES_COLLECTION_NAME).updateOne(timeOutFilter(gameIdParam), timeOutUpdates(winner))
+                var dbState = await database.collection(GAMES_COLLECTION_NAME).updateOne(timeOutFilter(gameIdParam), timeOutUpdates(winner, winner_username))
                 if (!dbState['acknowledged'] || dbState['matchedCount'] > 0) {
                     console.log('winner of game: ' + gameIdParam + " is user:" + winner + " \nthe game timed out")
                     console.log('a user timed out moves for a game ' + gameIdParam)
+                } else {
+                    var dbState = await database.collection(GAMES_COLLECTION_NAME).updateOne(resetTimeOutFilter(gameIdParam), resetTimeOutUpdates())
+                    if (!dbState['acknowledged'] || dbState['matchedCount'] > 0) {
+                        console.log('reset timer for game ' + gameIdParam)
+                    }
                 }
             }
             gameState = await database.collection(GAMES_COLLECTION_NAME).findOne({ _id: gameIdParam })
@@ -155,7 +177,7 @@ app.post('/submitMove', async (req, res) => {
         && validateMove(fromColumnId, fromRowId, toColumnId, toRowId)) {
         // game identifiers
         var gameIdParam = ObjectId(req.query[GAME_ID_PARAMETER])
-        var userId = req.query[USER_ID_PARAMETER]
+        var userId = parseInt(req.query[USER_ID_PARAMETER])
         var token = req.query[TOKEN_PARAMETER]
         var username = req.query[USERNAME_PARAMETER]
         // move status
@@ -198,13 +220,15 @@ app.post('/submitMove', async (req, res) => {
                     // check if the game has been won
                     var winner = null
                     var won_by = null
+                    var winner_username = null
                     if (chessBoard.in_checkmate()) {
                         // if so set the winner id and update the db entry and game state object
                         winner = userId;
+                        winner_username = username
                         won_by = 'Checkmate'
                     }
                     // update the database entry
-                    var dbState = await database.collection(GAMES_COLLECTION_NAME).updateOne(checkmateFilter(gameIdParam), checkmateUpdates(chessBoard, gameState, newCurrentUserId, winner))
+                    var dbState = await database.collection(GAMES_COLLECTION_NAME).updateOne(checkmateFilter(gameIdParam), checkmateUpdates(chessBoard, gameState, newCurrentUserId, winner, won_by, winner_username))
                     // verify if the game has been updated
                     if (!dbState['acknowledged']) {
                         throw 'the game was not updated'
@@ -244,7 +268,7 @@ app.post('/submitMove', async (req, res) => {
 app.get('/getAllGames', async (req, res) => {
     console.log("getting all games")
     if (Object.keys(req.query).length == 2 && req.query[TOKEN_PARAMETER].length > 0 && req.query[USER_ID_PARAMETER] != null) {
-        var userId = req.query[USER_ID_PARAMETER]
+        var userId = parseInt(req.query[USER_ID_PARAMETER])
         var token = req.query[TOKEN_PARAMETER]
         var isValid = false
         var errMsg = "Failed to get all games, user:" + userId
@@ -253,7 +277,7 @@ app.get('/getAllGames', async (req, res) => {
         try {
             isValid = validateToken(isValid, token, userId);
             // load the game state from the database
-            gameStates = await database.collection(GAMES_COLLECTION_NAME).find(allGameFilter(), allGameConfig()).toArray()
+            gameStates = await database.collection(GAMES_COLLECTION_NAME).find(allGameFilter(userId), allGameConfig()).toArray()
         } catch (e) {
             console.error(errMsg)
             console.error(e)
@@ -290,7 +314,7 @@ app.post('/joinGame', async (req, res) => {
 
             isValid = validateToken(isValid, token, userId);
             // filter by game and by ones that still have the w_player as -1 - game not started
-            var dbState = await database.collection(GAMES_COLLECTION_NAME).updateOne({ _id: gameIdParam, w_player: -1 }, { $set: { w_player: userId, w_player_username: username } })
+            var dbState = await database.collection(GAMES_COLLECTION_NAME).updateOne(getJoinGameFilter(gameIdParam), getJoinGameUpdates(userId, username))
             // check if by the time we update the db entry, another user has not updated the same entry
             if (!dbState['acknowledged'] || dbState['matchedCount'] == 0) {
                 throw 'the game was not updated - game must have have already started'
@@ -323,7 +347,7 @@ app.post('/joinGame', async (req, res) => {
 
 app.post('/quitGame', async (req, res) => {
     if (Object.keys(req.query).length == 3 && req.query[TOKEN_PARAMETER].length > 0 && req.query[GAME_ID_PARAMETER] != null && req.query[USER_ID_PARAMETER] != null) {
-        var userId = req.query[USER_ID_PARAMETER]
+        var userId = parseInt(req.query[USER_ID_PARAMETER])
         var token = req.query[TOKEN_PARAMETER]
         var gameIdParam = ObjectId(req.query[GAME_ID_PARAMETER])
         var isValid = false
@@ -346,12 +370,14 @@ app.post('/quitGame', async (req, res) => {
                 if (gameState != null) {
                     // determine the winner
                     var winner = gameState['br_player']
+                    var winner_username = gameState['br_player_username']
                     if (gameState['br_player'] == userId) {
                         winner = gameState['w_player']
+                        winner_username = gameState['w_player_username']
                     }
                     // update the game entry
                     console.log('updating game - user ' + userId + '')
-                    gameState = await database.collection(GAMES_COLLECTION_NAME).updateOne(quitExistingGameFilter(gameIdParam), quitExistingGameUpdates(winner))
+                    gameState = await database.collection(GAMES_COLLECTION_NAME).updateOne(quitExistingGameFilter(gameIdParam), quitExistingGameUpdates(winner, winner_username))
                 } else {
                     throw 'the game does not exist anymore'
                 }
@@ -381,12 +407,12 @@ app.post('/quitGame', async (req, res) => {
 });
 
 app.post('/getGameProfile', async (req, res) => {
-    if (Object.keys(req.query).length == 2 && req.query[TOKEN_PARAMETER].length > 0 && req.query[USER_ID_PARAMETER] != null) {
+    if (Object.keys(req.query).length == 3 && req.query[TOKEN_PARAMETER].length > 0 && req.query[USER_ID_PARAMETER] != null && req.query[USERNAME_PARAMETER] != null) {
         var userId = parseInt(req.query[USER_ID_PARAMETER])
         var token = req.query[TOKEN_PARAMETER]
+        var username = req.query[USERNAME_PARAMETER]
         var isValid = false
         var errMsg = "Failed to get all games, user:" + userId
-        var gamesWon = null
         var gamesLostAsBr = null
         var gamesLostAsW = null
         var profile = null
@@ -394,67 +420,20 @@ app.post('/getGameProfile', async (req, res) => {
         try {
             isValid = validateToken(isValid, token, userId);
 
-            var topPlayers  = await database
-                .collection(GAMES_COLLECTION_NAME)
-                .aggregate([{ $project: { _id: false, winner_player: 1 } }
-                    , { $group: { _id: '$winner_player', count: { $sum: 1 } } }
-                    , { $sort: { count: -1 } }
-                    , { $limit: 2 }]).toArray()
-            const topPlayerIds = extractIds(topPlayers)
-            
-            var topPlayerWName = await database
-            .collection(GAMES_COLLECTION_NAME)
-            .find({w_player: { $in: topPlayerIds }})
-            .project({ w_player: 1, w_player_username: 1 }).toArray()
-
-            var topPlayerBrName = await database
-            .collection(GAMES_COLLECTION_NAME)
-            .find({ br_player: { $in: topPlayerIds }})
-            .project({ br_player: 1, br_player_username: 1 }).toArray()
-
-            var topPlayerLosesAsW = await database.collection(GAMES_COLLECTION_NAME)
-                .aggregate([{
-                    $project: {
-                        _id: {
-                            $cond: {
-                                if: { $ne: ["$w_player", "$winner_player"] }
-                                , then: '$w_player'
-                                , else: "$$REMOVE"
-                            }
-                        },
-                        username: '$w_player_username'
-                    }
-                }
-                    , { $match: { _id: { $in: topPlayerIds } } }
-                    , { $group: { _id: '$_id', count: { $sum: 1 } } }]).toArray()
-            var topPlayerLosesAsBr = await database.collection(GAMES_COLLECTION_NAME)
-                .aggregate([{
-                    $project: {
-                        _id: {
-                            $cond: {
-                                if: { $ne: ["$br_player", "$winner_player"] }
-                                , then: '$br_player'
-                                , else: "$$REMOVE"
-                            }
-                        },
-                        username: '$br_player_username'
-                    }
-                }
-                    , { $match: { _id: { $in: topPlayerIds } } }
-                    , { $group: { _id: '$_id', count: { $sum: 1 } } }]).toArray()
-
-            const topPlayerProfiles = configureTopPlayerProfiles(topPlayerLosesAsBr, topPlayerLosesAsW, topPlayers, topPlayerWName, topPlayerBrName)
-
             // load the game state from the database
-            gamesWon = await database.collection(GAMES_COLLECTION_NAME).countDocuments(allSingleUserGamesWon(userId))
-            gamesLostAsBr = await database.collection(GAMES_COLLECTION_NAME).countDocuments(allSingleUserGamesLostAsBr(userId))
-            gamesLostAsW = await database.collection(GAMES_COLLECTION_NAME).countDocuments(allSingleUserGamesLostAsW(userId))
-
-            profile = {
-                userId: userId,
-                wins: gamesWon,
-                losses: gamesLostAsBr + gamesLostAsW,
-                topPlayers: topPlayerProfiles
+            gamesLostAsBr = await database.collection(GAMES_COLLECTION_NAME).countDocuments(allSingleUserGamesLostAsBr(username))
+            gamesLostAsW = await database.collection(GAMES_COLLECTION_NAME).countDocuments(allSingleUserGamesLostAsW(username))
+            var gamesAsBr = await database.collection(GAMES_COLLECTION_NAME).find(gameAsBrFilter(username)).toArray()
+            var gamesAsW = await database.collection(GAMES_COLLECTION_NAME).find(gameAsWFilter(username)).toArray()
+            if (gamesAsBr.length > 0 || gamesAsW.length > 0) {
+                profile = {
+                    username: username,
+                    wins: gamesAsBr.length + gamesAsW.length - (gamesLostAsBr + gamesLostAsW),
+                    losses: gamesLostAsBr + gamesLostAsW,
+                    games: [].concat(gamesAsBr).concat(gamesAsW)
+                }
+            } else {
+                profile = {}
             }
 
         } catch (e) {
@@ -519,6 +498,22 @@ client.connect().then(mClient => {
     console.log("ready to go");
 })
 
+function gameAsWFilter(username) {
+    return { w_player_username: username, winner_player: { $ne: null } };
+}
+
+function gameAsBrFilter(username) {
+    return { br_player_username: username, winner_player: { $ne: null } };
+}
+
+function getJoinGameUpdates(userId, username) {
+    return { $set: { br_player: userId, br_player_username: username } };
+}
+
+function getJoinGameFilter(gameIdParam) {
+    return { _id: gameIdParam, br_player: -1 };
+}
+
 function updateHistory(gameState, userId, username, fromRowId, fromColumnId, toRowId, toColumnId) {
     gameState['history'].push(
         {
@@ -533,25 +528,21 @@ function updateHistory(gameState, userId, username, fromRowId, fromColumnId, toR
 }
 
 function deleteExistingUnstartedGameFilter(gameIdParam) {
-    return { _id: gameIdParam, w_player: -1 };
+    return { _id: gameIdParam, br_player: -1 };
 }
 
 // --------- Query filters, configs, and updates --------- //
 
-function allSingleUserGamesWon(userId) {
-    return { winner_player: userId };
+function allSingleUserGamesLostAsW(username) {
+    return { w_player_username: { $eq: username }, winner_player_username: { $nin: [username, null] } }
 }
 
-function allSingleUserGamesLostAsW(userId) {
-    return { w_player: { $eq: userId }, winner_player: { $ne: userId }}
+function allSingleUserGamesLostAsBr(username) {
+    return { br_player_username: { $eq: username }, winner_player_username: { $nin: [username, null] } }
 }
 
-function allSingleUserGamesLostAsBr(userId) {
-    return { br_player: { $eq: userId }, winner_player: { $ne: userId }}
-}
-
-function quitExistingGameUpdates(winner) {
-    return { $set: { winner_player: winner, winner_by: 'Player quit' } };
+function quitExistingGameUpdates(winner, winner_username) {
+    return { $set: { winner_player: winner, winner_player_username: winner_username, winner_by: 'Player quit' } };
 }
 
 function quitExistingGameFilter(gameIdParam) {
@@ -562,8 +553,8 @@ function allGameConfig() {
     return { limit: numGamesReturnedLimit, sort: ['creationDate'] };
 }
 
-function allGameFilter() {
-    return { w_player: -1 };
+function allGameFilter(userId) {
+    return { br_player: -1, w_player: { $ne: userId } };
 }
 
 function simpleGameIdFilter(gameIdParam) {
@@ -574,20 +565,28 @@ function makeBoardMove(chessBoard, fromColumnId, fromRowId, toColumnId, toRowId)
     return chessBoard.move({ from: fromColumnId.toLocaleLowerCase() + '' + fromRowId, to: toColumnId.toLocaleLowerCase() + '' + toRowId });
 }
 
-function checkmateUpdates(chessBoard, gameState, newCurrentUserId, winner, won_by) {
-    return { $set: { fenState: chessBoard.fen(), state: gameState['state'], current_player: newCurrentUserId, lastModified: new Date(), winner_player: winner, winner_by: won_by } };
+function checkmateUpdates(chessBoard, gameState, newCurrentUserId, winner, won_by, winner_username) {
+    return { $set: { fenState: chessBoard.fen(), state: gameState['state'], history: gameState['history'], current_player: newCurrentUserId, lastModified: new Date(), winner_player: winner, winner_player_username: winner_username, winner_by: won_by } };
 }
 
 function checkmateFilter(gameIdParam) {
     return { _id: gameIdParam, winner_player: null };
 }
 
-function timeOutUpdates(winner) {
-    return { $set: { winner_player: winner, winner_by: 'Player timed-out' } };
+function timeOutUpdates(winner, winner_username) {
+    return { $set: { winner_player: winner, winner_player_username: winner_username, winner_by: 'Player timed-out' } };
+}
+
+function resetTimeOutUpdates() {
+    return { $set: { lastModified: new Date() } };
 }
 
 function timeOutFilter(gameIdParam) {
-    return { _id: gameIdParam, winner_player: { $eq: null }, lastModified: { $lt: new Date(new Date() - MOVE_TIME_LIMIT_MILISECONDS) } };
+    return { _id: gameIdParam, winner_player: { $eq: null }, br_player: { $nin: [-1, null] }, w_player: { $ne: null }, lastModified: { $lt: new Date(new Date() - MOVE_TIME_LIMIT_MILISECONDS) } };
+}
+
+function resetTimeOutFilter(gameIdParam) {
+    return { _id: gameIdParam, winner_player: { $eq: null }, br_player: { $eq: -1 } };
 }
 
 // --------- Helper methods --------- //
@@ -604,19 +603,19 @@ function configureTopPlayerProfiles(topPlayerLosesAsBr, topPlayerLosesAsW, topPl
             topPlayerIds: []
         };
     });
-    
+
     topPlayerWName.forEach(element => {
         if (profiles[element['w_player']] != null) {
             profiles[element['w_player']].username = element['w_player_username']
         }
     });
-    
+
     topPlayerBrName.forEach(element => {
         if (profiles[element['br_player']] != null) {
             profiles[element['br_player']].username = element['br_player_username']
         }
     });
-    
+
     topPlayerLosesAsBr.forEach(element => {
         if (profiles[element['_id']] != null) {
             profiles[element['_id']].loses += element['count']
@@ -633,15 +632,6 @@ function configureTopPlayerProfiles(topPlayerLosesAsBr, topPlayerLosesAsW, topPl
     return array
 }
 
-function extractIds(topPlayers) {
-    const ids = []
-    topPlayers.forEach(element => {
-        ids.push(element['_id'])
-    });
-    return ids
-}
-
-
 function validateToken(isValid, token, userId) {
     console.log("verifying user token");
     isValid = jwt.verify(token, webappCert, jwtOptions).userId == userId;
@@ -650,8 +640,8 @@ function validateToken(isValid, token, userId) {
 }
 
 function validatePieceMoved(prevPiece, userId, br_player_id, w_player_id, current_player_id) {
-    const isBrPlayerMovingBrPiece = prevPiece.startsWith('br_') && br_player_id == userId;
-    const isWPlayerMovingWPiece = prevPiece.startsWith('w_') && w_player_id == userId;
+    const isBrPlayerMovingBrPiece = prevPiece.startsWith('br-') && br_player_id == userId;
+    const isWPlayerMovingWPiece = prevPiece.startsWith('w-') && w_player_id == userId;
     if (!(isBrPlayerMovingBrPiece || isWPlayerMovingWPiece)) {
         throw 'userId:' + userId + 'tried to move the piece:' + prevPiece
     } else if (current_player_id != userId) {
@@ -682,17 +672,7 @@ function validateRow(rowId) {
 }
 
 function determineTimedOutWinner(gameState, userId, winner) {
-    if (gameState['current_player'] != userId) {
-        winner = userId;
-    } else {
-        console.log('current_player: ' + gameState['current_player'] + " called by: " + userId);
-        if (gameState['br_player'] == userId) {
-            winner = gameState['w_player'];
-        } else {
-            winner = gameState['br_player'];
-        }
-    }
-    return winner;
+
 }
 
 function calcColumnId(fromColumnId) {

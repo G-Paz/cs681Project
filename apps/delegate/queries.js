@@ -9,6 +9,7 @@ queries.INIT_GAME_STATE_TEMPLATE_JSON = {
   "current_player": 1,
   "fenState": null,
   "winner_player": null,
+  "winner_player_username": null,
   "winner_by": null,
   "creationDate": null,
   "lastModified": null,
