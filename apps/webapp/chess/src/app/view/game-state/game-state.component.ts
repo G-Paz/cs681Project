@@ -1,7 +1,6 @@
 import { Component, OnInit } from "@angular/core";
 import { FormBuilder, FormGroup, Validators } from "@angular/forms";
-import { ActivatedRoute, Router } from "@angular/router";
-import { interval, Observable, Subscription } from "rxjs";
+import { interval, Subscription } from "rxjs";
 import { Game } from "src/app/model/game/game";
 import { GameColumn } from "src/app/model/game/state/game-column";
 import { DelegateService } from "src/app/service/delegate.service";
@@ -86,7 +85,8 @@ export class GameStateComponent implements OnInit {
       gameControls.toRowId.value,
       this.gameState._id,
       user.token,
-      user.id
+      user.id,
+      user.username
     );
   }
 
@@ -157,7 +157,7 @@ export class GameStateComponent implements OnInit {
         user.id
       );
     } else {
-      this.delegateService.createGameState(user.token, user.id);
+      this.delegateService.createGameState(user.token, user.id, user.username);
     }
   }
 

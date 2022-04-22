@@ -1,3 +1,4 @@
+import { GameHistory } from "./game-history";
 import { GameRow } from "./state/game-row";
 
 export class Game {
@@ -8,8 +9,10 @@ export class Game {
     public current_player: 1,
     public fenState: string,
     public winner_player: number,
+    public winner_player_username: string,
     public winner_by: string,
     public creationDate: Date,
+    public history: Array<GameHistory>,
     public state: Array<GameRow>
   ) {}
 }

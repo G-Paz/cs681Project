@@ -13,6 +13,7 @@
         <li *ngIf="loggedIn && notInGame"><a routerLink="profile">Profile</a></li>
         <li *ngIf="loggedIn && notInGame"><a routerLink="gamestate">New Game</a></li>
         <li *ngIf="loggedIn && notInGame"><a routerLink="findgame">Find Game</a></li>
+        <li *ngIf="loggedIn && notInGame"><a routerLink="finduser">Find User</a></li>
         <li *ngIf="loggedIn" class="w3-right"><a (click)="logout()">Logout</a></li>
         <li *ngIf="notLoggedIn" class="w3-right"><a routerLink="login">Login</a></li>
       </ul>

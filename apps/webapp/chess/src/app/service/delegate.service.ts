@@ -5,6 +5,7 @@ import { BehaviorSubject } from "rxjs/internal/BehaviorSubject";
 import { Observable } from "rxjs/internal/Observable";
 import { environment } from "src/environments/environment";
 import { Game } from "../model/game/game";
+import { Profile } from "../model/profile";
 
 @Injectable({
   providedIn: "root",
@@ -16,6 +17,8 @@ export class DelegateService {
   public status: Observable<string>;
   public allGames: BehaviorSubject<Array<Game>>;
   public games: Observable<Array<Game>>;
+  public profileSubject: BehaviorSubject<any>;
+  public profile: Observable<Profile>;
 
   constructor(private router: Router, private http: HttpClient) {
     //initialize the game from the one stored in the browser
@@ -29,10 +32,17 @@ export class DelegateService {
     // initialize the game status
     this.allGames = new BehaviorSubject<any>(new Array<Game>());
     this.games = this.allGames.asObservable();
+    // initialize the game status
+    this.profileSubject = new BehaviorSubject<any>(JSON.parse(sessionStorage.getItem("profile") + ""));
+    this.profile = this.profileSubject.asObservable();
   }
 
   public get gameValue(): Game {
     return this.gameSubject.value;
+  }
+
+  public get profileValue(): Profile {
+    return this.profileSubject.value;
   }
 
   public get allGamesValue(): Array<Game> {
@@ -61,12 +71,15 @@ export class DelegateService {
       );
   }
 
-  createGameState(token: string, userId: number) {
+  createGameState(token: string, userId: number, username: string) {
     console.log("creating game state");
     return this.http
       .post<Game>(`${environment.delegateUrl}/createGame`, null, {
         headers: new HttpHeaders(),
-        params: new HttpParams().set("userId", userId).set("token", token),
+        params: new HttpParams()
+          .set("userId", userId)
+          .set("token", token)
+          .set("username", username),
       })
       .subscribe((res) => {
         // store user details and jwt token in local storage to keep user logged in between page refreshes
@@ -82,7 +95,8 @@ export class DelegateService {
     toRowId: number,
     gameId: number,
     token: string,
-    userId: number
+    userId: number,
+    username: string
   ) {
     console.log("persisting move");
     return this.http
@@ -95,7 +109,8 @@ export class DelegateService {
           .set("toRowId", toRowId)
           .set("gameId", gameId)
           .set("userId", userId)
-          .set("token", token),
+          .set("token", token)
+          .set("username", username),
       })
       .subscribe(
         (res) => {
@@ -132,7 +147,13 @@ export class DelegateService {
       );
   }
 
-  joinGame(gameId: number, userId: number, token: string, complete: () => void) {
+  joinGame(
+    gameId: number,
+    userId: number,
+    token: string,
+    username: string,
+    complete: () => void
+  ) {
     console.log("joining game");
     return this.http
       .post<Game>(`${environment.delegateUrl}/joinGame`, null, {
@@ -140,7 +161,8 @@ export class DelegateService {
         params: new HttpParams()
           .set("gameId", gameId)
           .set("userId", userId)
-          .set("token", token),
+          .set("token", token)
+          .set("username", username),
       })
       .subscribe(
         (res) => {
@@ -148,7 +170,7 @@ export class DelegateService {
           // store user details and jwt token in local storage to keep user logged in between page refreshes
           this.setGame(res);
           this.gameStatus.next("");
-          complete()
+          complete();
           return res;
         },
         (error) => {
@@ -187,6 +209,10 @@ export class DelegateService {
     this.gameSubject.next(null);
     this.gameStatus.next("");
   }
+  removeProfile() {
+    this.profileSubject.next(null);
+    sessionStorage.removeItem("profile");
+  }
 
   logout(gameId: number, userId: number, token: string) {
     if (gameId) {
@@ -194,6 +220,35 @@ export class DelegateService {
     } else {
       this.localQuitGame();
     }
+  }
+
+  getProfile(userId: number, token: string, username: string, complete: () => void, failed: () => void) {
+    return this.http
+      .post<Profile>(`${environment.delegateUrl}/getGameProfile`, null, {
+        headers: new HttpHeaders(),
+        params: new HttpParams()
+          .set("userId", userId)
+          .set("token", token)
+          .set("username", username),
+      })
+      .subscribe(
+        (res) => {
+          console.log(res);
+          if (res!=null && res.username != null) {
+            console.log("userfound with username" + username)
+            sessionStorage.setItem("profile", JSON.stringify(res));
+            this.profileSubject.next(res);
+            complete()
+          } else {
+            this.removeProfile();
+            failed()
+          }
+          return res;
+        },
+        (error) => {
+          console.error("Error loading profile:" + error);
+        }
+      );
   }
 
   private removeGame(res: any) {

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Game</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body class="w3-light-grey">
+  <div class="formContainer">
+    <form id="searchForm" [formGroup]="searchForm">
+      <div>
+        {{message}}
+      </div>
+      <div>
+        <label for="username">Username:</label>
+        <input type="text" formControlName="username" name="username" id="username" required ngModel />
+      </div>
+      <div class="w3-center w3-margin-top  w3-margin-bottom">
+        <button type="submit" (click)="goToProfile()">Go To Profile</button>
+      </div>
+    </form>
+  </div>
+</body>
+
+</html>
