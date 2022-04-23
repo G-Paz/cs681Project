@@ -7,7 +7,8 @@ import express from 'express';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import Chess from 'chess.js'
-
+import cookieParser from 'cookie-parser';
+import csurf from 'csurf';
 const webappCert = fs.readFileSync(config.webapp.pem);
 
 // Connection URL to the database
@@ -27,7 +28,10 @@ const numGamesReturnedLimit = 10;
 //https://www.npmjs.com/package/jsonwebtoken
 const jwtOptions = { algorithm: 'RS256', expiresIn: '24h' };
 
-var app = express().use(cors({}));
+var app = express().use(cors({
+    origin: 'https://localhost:4200',
+    methods: ['GET','POST']
+})).use(cookieParser())
 
 const GAMES_COLLECTION_NAME = 'games';
 
@@ -36,6 +40,13 @@ const GAME_ID_PARAMETER = "gameId";
 const USER_ID_PARAMETER = "userId";
 const USERNAME_PARAMETER = "username";
 
+var csrfProtection = csurf({ cookie: true })
+// We need cookie-parser to be initialized as well.
+app.use('/', csrfProtection, (req, res, next) => {
+        res.cookie('XSRF-TOKEN', req.csrfToken(), { httpOnly: false }); 
+        next()
+    }
+);
 app.post('/createGame', async (req, res) => {
     console.log("creating game" + req.body)
     if (Object.keys(req.query).length == 3 && req.query[TOKEN_PARAMETER].length > 0 && req.query[USER_ID_PARAMETER] != null
@@ -405,7 +416,11 @@ app.post('/quitGame', async (req, res) => {
         res.status(500).send("There was an error.");
     }
 });
-
+app.use('/getGameProfile', csrfProtection, (req, res, next) => {
+    res.cookie('XSRF-TOKEN', req.csrfToken(), { httpOnly: false }); 
+    next()
+}
+);
 app.post('/getGameProfile', async (req, res) => {
     if (Object.keys(req.query).length == 3 && req.query[TOKEN_PARAMETER].length > 0 && req.query[USER_ID_PARAMETER] != null && req.query[USERNAME_PARAMETER] != null) {
         var userId = parseInt(req.query[USER_ID_PARAMETER])

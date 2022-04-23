@@ -52,7 +52,7 @@ export class DelegateService {
   getGameState(gameId: number, token: string, userId: number) {
     console.log("getting game state");
     return this.http
-      .post<Game>(`${environment.delegateUrl}/gameState`, null, {
+      .post<Game>(`/api/gameState`, null, {
         headers: new HttpHeaders(),
         params: new HttpParams()
           .set("gameId", gameId)
@@ -74,7 +74,7 @@ export class DelegateService {
   createGameState(token: string, userId: number, username: string) {
     console.log("creating game state");
     return this.http
-      .post<Game>(`${environment.delegateUrl}/createGame`, null, {
+      .post<Game>(`/api/createGame`, null, {
         headers: new HttpHeaders(),
         params: new HttpParams()
           .set("userId", userId)
@@ -100,7 +100,7 @@ export class DelegateService {
   ) {
     console.log("persisting move");
     return this.http
-      .post<Game>(`${environment.delegateUrl}/submitMove`, null, {
+      .post<Game>(`/api/submitMove`, null, {
         headers: new HttpHeaders(),
         params: new HttpParams()
           .set("fromColumnId", fromColumnId)
@@ -130,7 +130,7 @@ export class DelegateService {
   getAllGames(userId: number, token: string) {
     console.log("joining game");
     return this.http
-      .get<Array<Game>>(`${environment.delegateUrl}/getAllGames`, {
+      .get<Array<Game>>(`/api/getAllGames`, {
         headers: new HttpHeaders(),
         params: new HttpParams().set("userId", userId).set("token", token),
       })
@@ -156,7 +156,7 @@ export class DelegateService {
   ) {
     console.log("joining game");
     return this.http
-      .post<Game>(`${environment.delegateUrl}/joinGame`, null, {
+      .post<Game>(`/api/joinGame`, null, {
         headers: new HttpHeaders(),
         params: new HttpParams()
           .set("gameId", gameId)
@@ -182,7 +182,7 @@ export class DelegateService {
 
   quitGame(gameId: number, userId: number, token: string) {
     this.http
-      .post<any>(`${environment.delegateUrl}/quitGame`, null, {
+      .post<any>(`/api/quitGame`, null, {
         headers: new HttpHeaders(),
         params: new HttpParams()
           .set("gameId", gameId)
@@ -224,7 +224,7 @@ export class DelegateService {
 
   getProfile(userId: number, token: string, username: string, complete: () => void, failed: () => void) {
     return this.http
-      .post<Profile>(`${environment.delegateUrl}/getGameProfile`, null, {
+      .post<Profile>(`/api/getGameProfile`, null, {
         headers: new HttpHeaders(),
         params: new HttpParams()
           .set("userId", userId)
@@ -246,7 +246,8 @@ export class DelegateService {
           return res;
         },
         (error) => {
-          console.error("Error loading profile:" + error);
+          // console.error("Error loading profile:");
+          failed()
         }
       );
   }

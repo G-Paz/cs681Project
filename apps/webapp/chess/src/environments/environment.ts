@@ -4,8 +4,8 @@
 
 export const environment = {
   production: false,
-  iamUrl: 'https://localhost:8000',
-  delegateUrl: 'https://localhost:3000'
+  iamUrl: '//localhost:8000',
+  delegateUrl: '//localhost:3000'
 };
 
 /*

@@ -46,7 +46,11 @@ const server_port = config.web.port;
 // load server key and cert
 const server_options = {
     key: fs.readFileSync(config.web.key),
-    cert: fs.readFileSync(config.web.cert)
+    cert: fs.readFileSync(config.web.cert),
+    ca: config.webapp.pem,
+    requestCert: true,
+    rejectUnauthorized: true
+    // clientCertEngine: 'ECDHE-ECDSA-AES256-GCM-SHA384'
 };
 
 const jwtOptions = { algorithm: 'RS256', expiresIn: '24h' };
@@ -208,8 +212,30 @@ app.get('/isValidSession', async (req, res) => {
 const server = createServer(server_options, app).on('error', (err) => {
     console.log(err);
 }).on('clientError', (err) => {
+    console.log('***************clientError');
     console.log(err);
 }).on('close', (err) => {
+    console.log(err);
+}).on('tlsClientError', (err) => {
+    console.log('***************tlsClientError');
+    console.log(err);
+}).on('secureConnection', (err) => {
+    console.log('***************secureConnection');
+    console.log(err);
+}).on('connection', (err) => {
+    console.log('***************connection');
+    console.log(err);
+}).on('error', (err) => {
+    console.log('***************error');
+    console.log(err);
+}).on('request', (err) => {
+    console.log('***************request');
+    console.log(err);
+}).on('keylog', (err) => {
+    console.log('***************keylog');
+    console.log(err);
+}).on('newSession', (err) => {
+    console.log('***************newSession');
     console.log(err);
 });
 

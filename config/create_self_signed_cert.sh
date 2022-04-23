@@ -110,11 +110,12 @@ then
     mv server.crt webapp.crt
     mv server.key webapp.key
     mv server.req webapp.req
+    cat webapp.key webapp.crt > webapp.pem
     # copy the webapp cert to the delegate and iam ssl dir
-    cp webapp.crt $IAM_CONFIG_SSL_DIR
-    cp webapp.crt $DELEGATE_CONFIG_SSL_DIR
+    cp webapp.crt webapp.pem $IAM_CONFIG_SSL_DIR
+    cp webapp.crt webapp.pem $DELEGATE_CONFIG_SSL_DIR
     # move the webapp ssl files to the webapp ssl dir
-    mv webapp.crt webapp.req webapp.key $WEBAPP_CONFIG_SSL_DIR
+    mv webapp.pem webapp.crt webapp.req webapp.key $WEBAPP_CONFIG_SSL_DIR
 else
     echo "-------------------------------------------------------------"
     echo "Unknown app $1 !!"

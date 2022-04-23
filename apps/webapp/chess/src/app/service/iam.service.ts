@@ -31,7 +31,7 @@ export class IamService {
   createAccount(username: string, password: string) {
     console.log("username " + username + " password " + password);
     return this.http
-      .post<User>(`${environment.iamUrl}/createaccount`, null, {
+      .post<User>(`/iapi/createaccount`, null, {
         params: new HttpParams()
           .set("username", username)
           .set("password", password),
@@ -54,7 +54,7 @@ export class IamService {
   isValidSession(user: User) {
     console.log("username " + user.id + " token " + user.token);
     return this.http
-      .get<Validation>(`${environment.iamUrl}/isValidSession`,{
+      .get<Validation>(`/iapi/isValidSession`,{
         params: new HttpParams()
           .set("userId", user.id)
           .set("token", user.token),
@@ -69,7 +69,7 @@ export class IamService {
   login(username: string, password: string) {
     console.log("logging in user:" + username)
     return this.http
-      .post<User>(`${environment.iamUrl}/authenticate`, null, {
+      .post<User>(`/iapi/authenticate`, null, {
         params: new HttpParams()
           .set("username", username)
           .set("password", password),

@@ -1,17 +1,17 @@
-import { HttpClientModule } from '@angular/common/http';
-import { NgModule } from '@angular/core';
-import { ReactiveFormsModule } from '@angular/forms';
-import { BrowserModule } from '@angular/platform-browser';
-import { AppRoutingModule } from './app-routing.module';
-import { AppComponent } from './app.component';
-import { LoginComponent } from './view/login/login.component';
-import { CreateaccountComponent } from './view/createaccount/createaccount.component';
-import { GameStateComponent } from './view/game-state/game-state.component';
-import { FindGameComponent } from './view/find-game/find-game.component';
-import { ProfileComponent } from './view/profile/profile.component';
-import { HistoryComponent } from './view/history/history.component';
-import { FindUserComponent } from './view/find-user/find-user.component';
-
+import { HttpClientModule, HttpClientXsrfModule, HTTP_INTERCEPTORS, HttpXsrfTokenExtractor } from "@angular/common/http";
+import { NgModule } from "@angular/core";
+import { ReactiveFormsModule } from "@angular/forms";
+import { BrowserModule } from "@angular/platform-browser";
+import { AppRoutingModule } from "./app-routing.module";
+import { AppComponent } from "./app.component";
+// import { HttpXsrfCookieExtractor, HttpXsrfInterceptor, XSRF_COOKIE_NAME, XSRF_HEADER_NAME } from "./HttpXsrfInterceptor";
+import { CreateaccountComponent } from "./view/createaccount/createaccount.component";
+import { FindGameComponent } from "./view/find-game/find-game.component";
+import { FindUserComponent } from "./view/find-user/find-user.component";
+import { GameStateComponent } from "./view/game-state/game-state.component";
+import { HistoryComponent } from "./view/history/history.component";
+import { LoginComponent } from "./view/login/login.component";
+import { ProfileComponent } from "./view/profile/profile.component";
 
 @NgModule({
   declarations: [
@@ -22,15 +22,18 @@ import { FindUserComponent } from './view/find-user/find-user.component';
     FindGameComponent,
     ProfileComponent,
     HistoryComponent,
-    FindUserComponent
+    FindUserComponent,
   ],
   imports: [
     HttpClientModule,
     BrowserModule,
     AppRoutingModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    HttpClientXsrfModule.withOptions()
   ],
-  providers: [],
-  bootstrap: [AppComponent]
+  providers: [
+    // { provide: HTTP_INTERCEPTORS, useExisting: HttpClientXsrfModule, multi: true }
+  ],
+  bootstrap: [AppComponent],
 })
-export class AppModule { }
+export class AppModule {}
