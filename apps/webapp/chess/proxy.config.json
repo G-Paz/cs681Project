@@ -5,7 +5,7 @@
         "logLevel": "debug"
     },
     "/iapi": {
-        "target": "https://localhost:8000",
+        "target": "https://3.91.158.140:49160",
         "secure": true,
         "logLevel": "debug",
         "strictSSL": true,

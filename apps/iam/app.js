@@ -47,7 +47,7 @@ const server_port = config.web.port;
 const server_options = {
     key: fs.readFileSync(config.web.key),
     cert: fs.readFileSync(config.web.cert),
-    ca: config.webapp.pem,
+    // ca: config.webapp.pem,
     requestCert: true,
     rejectUnauthorized: true
     // clientCertEngine: 'ECDHE-ECDSA-AES256-GCM-SHA384'
@@ -208,6 +208,10 @@ app.get('/isValidSession', async (req, res) => {
     }
 });
 
+app.get('/', (req, res) => {
+    res.send('Hello World');
+  });
+
 // create the server
 const server = createServer(server_options, app).on('error', (err) => {
     console.log(err);
@@ -222,9 +226,11 @@ const server = createServer(server_options, app).on('error', (err) => {
 }).on('secureConnection', (err) => {
     console.log('***************secureConnection');
     console.log(err);
-}).on('connection', (err) => {
+}).on('connection', (socket) => {
     console.log('***************connection');
-    console.log(err);
+    console.log("A new connection was made by a client.");
+    socket.setTimeout(30 * 1000); 
+    console.log(socket);
 }).on('error', (err) => {
     console.log('***************error');
     console.log(err);

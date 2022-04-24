@@ -18,7 +18,7 @@ then
     echo "-------------------------------------------------------------"
 
     # creates a new PKCS certificate and writes it in text to a file "server.req"
-    openssl req -new -text -out server.req
+    openssl req -newkey rsa:2048 -text -out server.req
 
     # pass phrase = CS681
 
