@@ -76,8 +76,8 @@
           },
           "options": {
             "ssl": true,
-            "sslCert": "/usr/ssl/webapp.crt",
-            "sslKey": "/usr/ssl/webapp.key",
+            "sslCert": "./ssl/webapp.crt",
+            "sslKey": "./ssl/webapp.key",
             "proxyConfig": "./proxy.config.json"
           },
           "defaultConfiguration": "production"

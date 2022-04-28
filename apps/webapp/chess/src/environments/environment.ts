@@ -4,7 +4,7 @@
 
 export const environment = {
   production: false,
-  iamUrl: '//localhost:8000',
+  iamUrl: 'https://localhost:8000',
   delegateUrl: '//localhost:3000'
 };
 

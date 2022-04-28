@@ -18,7 +18,7 @@ then
     echo "-------------------------------------------------------------"
 
     # creates a new PKCS certificate and writes it in text to a file "server.req"
-    openssl req -newkey rsa:2048 -text -out server.req
+    openssl req -new -text -out server.req
 
     # pass phrase = CS681
 
@@ -110,12 +110,13 @@ then
     mv server.crt webapp.crt
     mv server.key webapp.key
     mv server.req webapp.req
+    #configure the pem for mongodb
     cat webapp.key webapp.crt > webapp.pem
     # copy the webapp cert to the delegate and iam ssl dir
     cp webapp.crt webapp.pem $IAM_CONFIG_SSL_DIR
     cp webapp.crt webapp.pem $DELEGATE_CONFIG_SSL_DIR
     # move the webapp ssl files to the webapp ssl dir
-    mv webapp.pem webapp.crt webapp.req webapp.key $WEBAPP_CONFIG_SSL_DIR
+    mv webapp.crt webapp.pem webapp.req webapp.key $WEBAPP_CONFIG_SSL_DIR
 else
     echo "-------------------------------------------------------------"
     echo "Unknown app $1 !!"

@@ -1,16 +1,18 @@
 {
     "/api": {
         "target": "https://localhost:3000",
+        "changeOrigin": true,
+        "withCredentials": true,
         "secure": false,
-        "logLevel": "debug"
+        "strictSSL": true,
+        "rejectUnauthorzied": true
     },
     "/iapi": {
-        "target": "https://3.91.158.140:49160",
-        "secure": true,
-        "logLevel": "debug",
-        "strictSSL": true,
+        "target": "https://localhost:8000",
+        "changeOrigin": true,
         "withCredentials": true,
-        "rejectUnauthorzied": true,
-        "changeOrigin": true
+        "secure": false,
+        "strictSSL": true,
+        "rejectUnauthorzied": true
     }
 }

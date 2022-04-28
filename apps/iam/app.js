@@ -47,17 +47,17 @@ const server_port = config.web.port;
 const server_options = {
     key: fs.readFileSync(config.web.key),
     cert: fs.readFileSync(config.web.cert),
-    // ca: config.webapp.pem,
-    requestCert: true,
-    rejectUnauthorized: true
-    // clientCertEngine: 'ECDHE-ECDSA-AES256-GCM-SHA384'
+    ca: fs.readFileSync(config.webapp.cert)
 };
 
 const jwtOptions = { algorithm: 'RS256', expiresIn: '24h' };
 
-var app = express().use(cors({}));
+var app = express().use(cors({
+    origin: 'https://localhost:4200',
+    methods: ['GET','POST']
+}));
 
-app.post('/createaccount', async (req, res) => {
+app.post('/iapi/createaccount', async (req, res) => {
     console.log(req);
     if (Object.keys(req.query).length == 2 && req.query["username"].length > 0 && req.query["password"].length > 0) {
         var salt = bcrypt.genSaltSync();
@@ -120,7 +120,7 @@ app.post('/createaccount', async (req, res) => {
     }
 });
 
-app.post('/authenticate', async (req, res) => {
+app.post('/iapi/authenticate', async (req, res) => {
     console.log(req);
     if (Object.keys(req.query).length == 2 && req.query["username"].length > 0 && req.query["password"].length > 0) {
         var username = req.query["username"];
@@ -208,45 +208,10 @@ app.get('/isValidSession', async (req, res) => {
     }
 });
 
-app.get('/', (req, res) => {
-    res.send('Hello World');
-  });
-
 // create the server
-const server = createServer(server_options, app).on('error', (err) => {
-    console.log(err);
-}).on('clientError', (err) => {
-    console.log('***************clientError');
-    console.log(err);
-}).on('close', (err) => {
-    console.log(err);
-}).on('tlsClientError', (err) => {
-    console.log('***************tlsClientError');
-    console.log(err);
-}).on('secureConnection', (err) => {
-    console.log('***************secureConnection');
-    console.log(err);
-}).on('connection', (socket) => {
-    console.log('***************connection');
-    console.log("A new connection was made by a client.");
-    socket.setTimeout(30 * 1000); 
-    console.log(socket);
-}).on('error', (err) => {
-    console.log('***************error');
-    console.log(err);
-}).on('request', (err) => {
-    console.log('***************request');
-    console.log(err);
-}).on('keylog', (err) => {
-    console.log('***************keylog');
-    console.log(err);
-}).on('newSession', (err) => {
-    console.log('***************newSession');
-    console.log(err);
-});
+const server = createServer(server_options, app);
 
 // start server
 server.listen(server_port, server_hostname, () => {
     console.log(`Server running at http://${server_hostname}:${server_port}/`);
 });
-

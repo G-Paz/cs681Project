@@ -17,8 +17,8 @@ const url = `mongodb://${config.mongodb.hostname}:${config.mongodb.port}?tls=tru
 const client = new MongoClient(url, {
     tlsCAFile: `${config.mongodb.pem}`,
     tlsCertificateKeyFile: `${config.web.pem}`,
-    connectTimeoutMS: config.mongodb.connection_timeout,
-    serverSelectionTimeoutMS: config.mongodb.selection_timeout,
+    // connectTimeoutMS: config.mongodb.connection_timeout,
+    // serverSelectionTimeoutMS: config.mongodb.selection_timeout,
     maxIdleTimeMS: config.mongodb.idle_timeout
 });
 // create a variable to keep track of the database we're connecting to
@@ -31,7 +31,7 @@ const jwtOptions = { algorithm: 'RS256', expiresIn: '24h' };
 var app = express().use(cors({
     origin: 'https://localhost:4200',
     methods: ['GET','POST']
-})).use(cookieParser())
+}))
 
 const GAMES_COLLECTION_NAME = 'games';
 
@@ -47,7 +47,7 @@ app.use('/', csrfProtection, (req, res, next) => {
         next()
     }
 );
-app.post('/createGame', async (req, res) => {
+app.post('/api/createGame', async (req, res) => {
     console.log("creating game" + req.body)
     if (Object.keys(req.query).length == 3 && req.query[TOKEN_PARAMETER].length > 0 && req.query[USER_ID_PARAMETER] != null
         && req.query[USERNAME_PARAMETER] != null) {
@@ -101,7 +101,7 @@ app.post('/createGame', async (req, res) => {
 });
 
 const MOVE_TIME_LIMIT_MILISECONDS = 100000;
-app.post('/gameState', async (req, res) => {
+app.post('/api/gameState', async (req, res) => {
     console.error("getting game state" + req)
     if (Object.keys(req.query).length == 3 && req.query[GAME_ID_PARAMETER] != null && ObjectId.isValid(req.query[GAME_ID_PARAMETER]) && req.query[TOKEN_PARAMETER].length > 0 && req.query[USER_ID_PARAMETER] != null) {
         var userId = parseInt(req.query[USER_ID_PARAMETER])
@@ -176,7 +176,7 @@ app.post('/gameState', async (req, res) => {
     }
 });
 
-app.post('/submitMove', async (req, res) => {
+app.post('/api/submitMove', async (req, res) => {
     console.log('submitMove start');
     // game move variables
     const fromColumnId = req.query["fromColumnId"];
@@ -276,7 +276,7 @@ app.post('/submitMove', async (req, res) => {
     }
 });
 
-app.get('/getAllGames', async (req, res) => {
+app.get('/api/getAllGames', async (req, res) => {
     console.log("getting all games")
     if (Object.keys(req.query).length == 2 && req.query[TOKEN_PARAMETER].length > 0 && req.query[USER_ID_PARAMETER] != null) {
         var userId = parseInt(req.query[USER_ID_PARAMETER])
@@ -311,7 +311,7 @@ app.get('/getAllGames', async (req, res) => {
     }
 });
 
-app.post('/joinGame', async (req, res) => {
+app.post('/api/joinGame', async (req, res) => {
     if (Object.keys(req.query).length == 4 && req.query[TOKEN_PARAMETER].length > 0 && req.query[GAME_ID_PARAMETER] != null && req.query[USERNAME_PARAMETER] != null && req.query[USER_ID_PARAMETER] != null) {
         var userId = parseInt(req.query[USER_ID_PARAMETER])
         var token = req.query[TOKEN_PARAMETER]
@@ -356,7 +356,7 @@ app.post('/joinGame', async (req, res) => {
     }
 });
 
-app.post('/quitGame', async (req, res) => {
+app.post('/api/quitGame', async (req, res) => {
     if (Object.keys(req.query).length == 3 && req.query[TOKEN_PARAMETER].length > 0 && req.query[GAME_ID_PARAMETER] != null && req.query[USER_ID_PARAMETER] != null) {
         var userId = parseInt(req.query[USER_ID_PARAMETER])
         var token = req.query[TOKEN_PARAMETER]
@@ -421,7 +421,7 @@ app.use('/getGameProfile', csrfProtection, (req, res, next) => {
     next()
 }
 );
-app.post('/getGameProfile', async (req, res) => {
+app.post('/api/getGameProfile', async (req, res) => {
     if (Object.keys(req.query).length == 3 && req.query[TOKEN_PARAMETER].length > 0 && req.query[USER_ID_PARAMETER] != null && req.query[USERNAME_PARAMETER] != null) {
         var userId = parseInt(req.query[USER_ID_PARAMETER])
         var token = req.query[TOKEN_PARAMETER]
@@ -481,7 +481,8 @@ const server_port = config.web.port;
 // load server key and cert
 const server_options = {
     key: fs.readFileSync(config.web.key),
-    cert: fs.readFileSync(config.web.cert)
+    cert: fs.readFileSync(config.web.cert),
+    ca: fs.readFileSync(config.webapp.cert)
 };
 
 // create the server
