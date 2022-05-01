@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators } from "@angular/forms";
 import { ActivatedRoute, Router } from "@angular/router";
 import { IamService } from "../../service/iam.service";
 import { first } from "rxjs/operators";
+import { environment } from "src/environments/environment";
 
 @Component({
   selector: "app-login",
@@ -18,7 +19,7 @@ export class LoginComponent implements OnInit {
     private router: Router
   ) {
     if (this.iamService.userValue) {
-      this.router.navigate(["/"]);
+      this.router.navigate([environment.h]);
     }
     // init to be replaced in ngOnInit
     this.loginForm = this.formBuilder.group({});
@@ -32,11 +33,10 @@ export class LoginComponent implements OnInit {
   }
 
   onCreateAccount(){
-    this.router.navigateByUrl("/createaccount")
+    this.router.navigateByUrl(environment.cra)
   }
 
   onLogin() {
-    console.log("invalid information")
     // stop here if form is invalid
     if (this.loginForm.invalid) {
       return;
@@ -51,12 +51,10 @@ export class LoginComponent implements OnInit {
       .subscribe({
         next: () => {
           // get return url from query parameters or default to home page
-          const returnUrl = this.route.snapshot.queryParams["returnUrl"] || "/";
-          this.router.navigateByUrl(returnUrl);
+          this.router.navigateByUrl(environment.h);
         },
         error: (error) => {
           console.error(error)
-          console.log("error");
         },
       });
   }

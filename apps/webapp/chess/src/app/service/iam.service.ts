@@ -10,6 +10,12 @@ import { Role } from "../model/role";
 import { User } from "../model/user";
 import { Validation } from "../model/validation";
 
+const U_ITEM = "user";
+const U_PARAM = "userId";
+const T_PARAM = "token";
+const US_PARAM = "username";
+const P_PARAM = "password";
+
 @Injectable({
   providedIn: "root",
 })
@@ -19,7 +25,7 @@ export class IamService {
 
   constructor(private router: Router, private http: HttpClient) {
     this.userSubject = new BehaviorSubject<User>(
-      JSON.parse(sessionStorage.getItem("user") + "")
+      JSON.parse(sessionStorage.getItem(U_ITEM) + "")
     );
     this.user = this.userSubject.asObservable();
   }
@@ -29,17 +35,16 @@ export class IamService {
   }
 
   createAccount(username: string, password: string) {
-    console.log("username " + username + " password " + password);
     return this.http
-      .post<User>(`/iapi/createaccount`, null, {
+      .post<User>(environment.cr_a_ep, null, {
         params: new HttpParams()
-          .set("username", username)
-          .set("password", password),
+          .set(US_PARAM, username)
+          .set(P_PARAM, password),
       })
       .pipe(
         map((user) => {
           // store user details and jwt token in local storage to keep user logged in between page refreshes
-          sessionStorage.setItem("user", JSON.stringify(user));
+          sessionStorage.setItem(U_ITEM, JSON.stringify(user));
           this.userSubject.next(user);
           return user;
         }),
@@ -52,12 +57,11 @@ export class IamService {
   }
 
   isValidSession(user: User) {
-    console.log("username " + user.id + " token " + user.token);
     return this.http
-      .get<Validation>(`/iapi/isValidSession`,{
+      .get<Validation>(environment.i_v_ep,{
         params: new HttpParams()
-          .set("userId", user.id)
-          .set("token", user.token),
+          .set(U_PARAM, user.id)
+          .set(T_PARAM, user.token),
       })
       .subscribe((res) => {
         if (!res.isValid){
@@ -67,17 +71,16 @@ export class IamService {
   }
 
   login(username: string, password: string) {
-    console.log("logging in user:" + username)
     return this.http
-      .post<User>(`/iapi/authenticate`, null, {
+      .post<User>(environment.a_ep, null, {
         params: new HttpParams()
-          .set("username", username)
-          .set("password", password),
+          .set(US_PARAM, username)
+          .set(P_PARAM, password),
       })
       .pipe(
         map((user) => {
           // store user details and jwt token in local storage to keep user logged in between page refreshes
-          sessionStorage.setItem("user", JSON.stringify(user));
+          sessionStorage.setItem(U_ITEM, JSON.stringify(user));
           this.userSubject.next(user);
           return user;
         })
@@ -86,7 +89,7 @@ export class IamService {
 
   logout() {
     // remove user from local storage to log user out
-    sessionStorage.removeItem("user");
+    sessionStorage.removeItem(U_ITEM);
     this.userSubject.next(null);
     this.router.navigate(["/login"]);
   }

@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from "@angular/router";
 import { Game } from "src/app/model/game/game";
 import { DelegateService } from "src/app/service/delegate.service";
 import { IamService } from "src/app/service/iam.service";
+import { environment } from "src/environments/environment";
 
 @Component({
   selector: "app-find-game",
@@ -43,7 +44,7 @@ export class FindGameComponent implements OnInit {
     var user = this.iamService.userValue;
     this.delegateService.joinGame(game._id, user.id, user.token,
       user.username, () => {
-      this.router.navigate(["/gamestate"]);
+      this.router.navigate(["/" + environment.gs]);
     });
   }
 }

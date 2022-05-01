@@ -5,6 +5,7 @@ import { Profile } from "src/app/model/profile";
 import { User } from "src/app/model/user";
 import { DelegateService } from "src/app/service/delegate.service";
 import { IamService } from "src/app/service/iam.service";
+import { environment } from "src/environments/environment";
 
 @Component({
   selector: "app-profile",
@@ -20,9 +21,8 @@ export class ProfileComponent implements OnInit {
     private iamService: IamService,
     private router: Router
   ) {
-    this.delegateService.profile.subscribe((x) => {
-      this.profile = x;
-      console.log(x);
+    this.delegateService.profile.subscribe((p) => {
+      this.profile = p;
     });
 
     this.user = this.iamService.userValue;
@@ -31,18 +31,14 @@ export class ProfileComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.profile == null) {
-      console.log("profile is null")
-      console.log(this.delegateService.profileValue)
       const user = this.iamService.userValue;
       this.delegateService.getProfile(
         user.id,
         user.token,
         user.username,
         () => {
-          console.log("loaded current user profile")
         },
         () => {
-          console.log("user has not played a game - defaults")
           this.profile = new Profile(0,0,this.user.username, [])
         }
       );
@@ -58,11 +54,11 @@ export class ProfileComponent implements OnInit {
   }
 
   viewGame(game: Game) {
-    sessionStorage.setItem("history", JSON.stringify(game.history));
-    this.router.navigate(["/history"]);
+    sessionStorage.setItem(DelegateService.H_ITEM, JSON.stringify(game.history));
+    this.router.navigate(["/" + environment.hy]);
   }
 
   returnHome() {
-    this.router.navigate(["/"]);
+    this.router.navigate([environment.h]);
   }
 }
