@@ -33,8 +33,16 @@ const jwtOptions = { algorithm: 'RS256', expiresIn: '24h' };
 
 var app = express().use(cors({
     origin: 'https://localhost:4200',
-    methods: ['GET', 'POST']
-}))
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+app.use((req, res, next) => {
+    res.setHeader('X-Frame-Options', 'DENY')
+    res.setHeader('X-Content-Type-Options', 'nosniff')
+    res.removeHeader('X-Powered-By');
+    next()
+})
+
 
 const GAMES_COLLECTION_NAME = 'games';
 
@@ -99,7 +107,7 @@ app.post('/api/createGame', async (req, res) => {
                     console.error(errMsg);
                     res.status(500).send(errMsg);
                 } else {
-                    res.status(200).json(gameState)
+                    configureSucessfulGameStateResponse(res, gameState)
                 }
             }
         } else {
@@ -114,7 +122,7 @@ app.post('/api/createGame', async (req, res) => {
 
 // create endpoint to load the game state
 app.post('/api/gameState', async (req, res) => {
-    var errMsg = "Failed to verify user retrieving game state";
+    var errMsg = "There was an error.";
     try {
         if (Object.keys(req.query).length == 3
             && isValidStringParameter(req.query[GAME_ID_PARAMETER])
@@ -193,7 +201,7 @@ app.post('/api/gameState', async (req, res) => {
                     console.error(errMsg);
                     res.status(500).send(errMsg);
                 } else {
-                    res.status(200).json(gameState)
+                    configureSucessfulGameStateResponse(res, gameState)
                 }
             }
         } else {
@@ -208,7 +216,7 @@ app.post('/api/gameState', async (req, res) => {
 
 // create endpoint to allow users to submit moves
 app.post('/api/submitMove', async (req, res) => {
-    var errMsg = "Failed to submit user move";
+    var errMsg = "There was an error.";
 
     try {
         // get the game move variables
@@ -319,7 +327,7 @@ app.post('/api/submitMove', async (req, res) => {
                     console.error(errMsg);
                     res.status(500).send(errMsg);
                 } else {
-                    res.status(200).json(gameState)
+                    configureSucessfulGameStateResponse(res, gameState)
                 }
             }
         } else {
@@ -334,7 +342,7 @@ app.post('/api/submitMove', async (req, res) => {
 
 // create endpoint for users to load all games
 app.get('/api/getAllGames', async (req, res) => {
-    var errMsg = "Failed to get all games"
+    var errMsg = "There was an error.";
 
     try {
         if (Object.keys(req.query).length == 2
@@ -380,7 +388,7 @@ app.get('/api/getAllGames', async (req, res) => {
 // create endpoint for users to join games
 app.post('/api/joinGame', async (req, res) => {
     var isValid = false
-    var errMsg = "Failed to join game, user:" + userId
+    var errMsg = "There was an error.";
     var gameFound = null
 
     try {
@@ -433,7 +441,7 @@ app.post('/api/joinGame', async (req, res) => {
 
 // create endpoint to allow users to quit the game
 app.post('/api/quitGame', async (req, res) => {
-    var errMsg = "Failed to quit the game."
+    var errMsg = "There was an error.";
 
     if (Object.keys(req.query).length == 3 
         && isValidStringParameter(req.query[TOKEN_PARAMETER])
@@ -503,7 +511,7 @@ app.post('/api/quitGame', async (req, res) => {
 
 // create endpoint to get a user's game profile
 app.post('/api/getGameProfile', async (req, res) => {
-    var errMsg = "Failed to get all games for a user."
+    var errMsg = "There was an error.";
     try {
         if (Object.keys(req.query).length == 3 
             && isValidStringParameter(req.query[TOKEN_PARAMETER])
@@ -597,6 +605,21 @@ client.connect().then(mClient => {
     console.log("ready to go");
 })
 
+function configureSucessfulGameStateResponse(res, gameState) {
+    res.status(200).json({
+        _id: gameState._id
+        , br_player: gameState.br_player
+        , w_player: gameState.w_player
+        , current_player: gameState.current_player
+        , fenState: gameState.fenState
+        , winner_player: gameState.winner_player
+        , winner_player_username: gameState.winner_player_username
+        , winner_by: gameState.winner_by
+        , history: gameState.history
+        , state: gameState.state
+    })
+}
+
 // --------- Query filters, configs, and updates --------- //
 
 function gameAsWFilter(username) {
@@ -646,7 +669,6 @@ function checkmateFilter(gameIdParam) {
 function timeOutFilter(gameIdParam, current_player_id) {
     return { _id: gameIdParam
             , winner_player: { $eq: null }
-            , current_player: { $ne: current_player_id }
             , br_player: { $nin: [-1, null] }
             , w_player: { $ne: null }
             , lastModified: { $lt: new Date(new Date() - MOVE_TIME_LIMIT_MILISECONDS) } };

@@ -11,7 +11,6 @@ export class Game {
     public winner_player: number,
     public winner_player_username: string,
     public winner_by: string,
-    public creationDate: Date,
     public history: Array<GameHistory>,
     public state: Array<GameRow>
   ) {}

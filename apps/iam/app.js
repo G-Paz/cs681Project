@@ -5,6 +5,7 @@ import pkg from 'pg';
 import config from './config.js';
 import queries from './queries.js';
 import roles from './roles.js';
+// import bodyParser from 'body-parser';
 import express from 'express';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
@@ -17,7 +18,9 @@ const webappCert = fs.readFileSync(config.webapp.pem);
 const U_PARAM = "username";
 const P_PARAM = "password";
 const ID_PARAM = "userId";
+const ID_IDX = 0;
 const TOKEN_PARAM = "token";
+const TOKEN_IDX = 1;
 
 // configure connection to postgres
 const db_config = {
@@ -61,13 +64,24 @@ const jwtOptions = { algorithm: 'RS256', expiresIn: '24h' };
 // configure app
 var app = express().use(cors({
     origin: 'https://localhost:4200',
-    methods: ['GET', 'POST']
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+app.use(express.json());
+app.use(express.urlencoded({extended: true}));
+
+app.use((req, res, next) => {
+    res.setHeader('X-Frame-Options', 'DENY')
+    res.setHeader('X-Content-Type-Options', 'nosniff')
+    res.removeHeader('X-Powered-By');
+    next()
+})
 
 // add create account post endpoint
 app.post('/iapi/createaccount', async (req, res) => {
     // init the error message
-    var errMsg = "There was an error creating user:" + username
+    var errMsg = "There was an error."
     try {
         if (Object.keys(req.query).length == 2
             && isValidStringParameter(req.query[U_PARAM])
@@ -141,7 +155,7 @@ app.post('/iapi/createaccount', async (req, res) => {
 
 // endpoint to authenticate user sign in
 app.post('/iapi/authenticate', async (req, res) => {
-    var errMsg = "There was an error verifying user"
+    var errMsg = "There was an error."
     try {
         if (Object.keys(req.query).length == 2
             && isValidStringParameter(req.query[U_PARAM])
@@ -200,16 +214,16 @@ app.post('/iapi/authenticate', async (req, res) => {
 });
 
 // endpoint to determine if the user is in a valid session
-app.get('/isValidSession', async (req, res) => {
+app.post('/iapi/isValidSession', async (req, res) => {
     // First read existing users.
-    var errMsg = "There was an error. Please sign in again."
+    var errMsg = "There was an error."
     try {
-        if (Object.keys(req.query).length == 2
-            && isValidStringParameter(req.query[ID_PARAM])
-            && isValidStringParameter(req.query[TOKEN_PARAM])) {
+        if (req.body.params.updates.length == 2
+            && isValidStringParameter(req.body.params.updates[ID_IDX].value)
+            && isValidStringParameter(req.body.params.updates[TOKEN_IDX].value)) {
 
-            var userId = req.query[ID_PARAM];
-            var token = req.query[TOKEN_PARAM];
+            var userId = req.body.params.updates[ID_IDX].value;
+            var token = req.body.params.updates[TOKEN_IDX].value;
             var isValid = false;
 
             try {
@@ -247,5 +261,5 @@ createServer(server_options, app).listen(server_port, server_hostname, () => {
 
 // helper method to varify non-empty parameters
 function isValidStringParameter(parameter) {
-    return parameter != null && parameter.length > 0;
+    return parameter != null && (Number.isSafeInteger(parameter) || parameter.length > 0);
 }

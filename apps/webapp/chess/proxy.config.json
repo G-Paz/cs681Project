@@ -14,5 +14,15 @@
         "secure": false,
         "strictSSL": true,
         "rejectUnauthorzied": true
+    },
+    "/*": {
+        "headers":{
+            "X-Frame-Options": "DENY",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'self'",
+            "Access-Control-Allow-Origin": "*",
+            "Content-Type": "application/json",
+            "X-Powered-By": ""
+        }
     }
 }

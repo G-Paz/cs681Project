@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { DelegateService } from 'src/app/service/delegate.service';
 
 @Component({
   selector: 'app-history',
@@ -13,7 +14,7 @@ export class HistoryComponent implements OnInit {
   }
 
   getGameHistory(){
-    return JSON.parse(sessionStorage.getItem("history") + "")
+    return JSON.parse(sessionStorage.getItem(DelegateService.H_ITEM) + "")
   }
 
 }

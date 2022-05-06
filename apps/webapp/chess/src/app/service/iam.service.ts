@@ -58,7 +58,7 @@ export class IamService {
 
   isValidSession(user: User) {
     return this.http
-      .get<Validation>(environment.i_v_ep,{
+      .post<Validation>(environment.i_v_ep,{
         params: new HttpParams()
           .set(U_PARAM, user.id)
           .set(T_PARAM, user.token),
