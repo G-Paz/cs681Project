@@ -36,6 +36,10 @@ var app = express().use(cors({
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+app.use(express.json());
+app.use(express.urlencoded({extended: true}));
+
 app.use((req, res, next) => {
     res.setHeader('X-Frame-Options', 'DENY')
     res.setHeader('X-Content-Type-Options', 'nosniff')
@@ -43,34 +47,23 @@ app.use((req, res, next) => {
     next()
 })
 
-
 const GAMES_COLLECTION_NAME = 'games';
-
-const TOKEN_PARAMETER = "token";
-const GAME_ID_PARAMETER = "gameId";
-const USER_ID_PARAMETER = "userId";
-const USERNAME_PARAMETER = "username";
-
-// var csrfProtection = csurf({ cookie: true })
-// We need cookie-parser to be initialized as well.
-// app.use('/', csrfProtection, (req, res, next) => {
-//         res.cookie('XSRF-TOKEN', req.csrfToken(), { httpOnly: false }); 
-//         next()
-//     }
-// );
 
 // create endpoint to allow the app to create games
 app.post('/api/createGame', async (req, res) => {
     var errMsg = "Error creating new game."
+    const UID_IDX = 0;
+    const T_IDX = 1;
+    const U_IDX = 2;
     try {
-        if (Object.keys(req.query).length == 3
-            && isValidStringParameter(req.query[TOKEN_PARAMETER])
-            && isValidStringParameter(req.query[USER_ID_PARAMETER])
-            && isValidStringParameter(req.query[USERNAME_PARAMETER])) {
+        if (req.body.params.updates.length == 3
+            && isValidStringParameter(getBodyParamValue(req, T_IDX))
+            && isValidStringParameter(getBodyParamValue(req, UID_IDX))
+            && isValidStringParameter(getBodyParamValue(req, U_IDX))) {
             // intialize variables
-            var userId = parseInt(req.query[USER_ID_PARAMETER])
-            var token = req.query[TOKEN_PARAMETER]
-            var username = req.query[USERNAME_PARAMETER]
+            var userId = parseInt(getBodyParamValue(req, UID_IDX))
+            var token = getBodyParamValue(req, T_IDX)
+            var username = getBodyParamValue(req, U_IDX)
             var isValid = false
             var gameState = null
             try {
@@ -123,16 +116,19 @@ app.post('/api/createGame', async (req, res) => {
 // create endpoint to load the game state
 app.post('/api/gameState', async (req, res) => {
     var errMsg = "There was an error.";
+    const GID_IDX = 0;
+    const UID_IDX = 1;
+    const T_IDX = 2;
     try {
-        if (Object.keys(req.query).length == 3
-            && isValidStringParameter(req.query[GAME_ID_PARAMETER])
-            && ObjectId.isValid(req.query[GAME_ID_PARAMETER])
-            && isValidStringParameter(req.query[TOKEN_PARAMETER])
-            && isValidStringParameter(req.query[USER_ID_PARAMETER])) {
+        if (req.body.params.updates.length == 3
+            && isValidStringParameter(getBodyParamValue(req, GID_IDX))
+            && ObjectId.isValid(getBodyParamValue(req, GID_IDX))
+            && isValidStringParameter(getBodyParamValue(req, UID_IDX))
+            && isValidStringParameter(getBodyParamValue(req, T_IDX))) {
             // intialize the vars
-            var userId = parseInt(req.query[USER_ID_PARAMETER])
-            var token = req.query[TOKEN_PARAMETER]
-            var gameIdParam = ObjectId(req.query[GAME_ID_PARAMETER])
+            var userId = parseInt(getBodyParamValue(req, UID_IDX))
+            var token = getBodyParamValue(req, T_IDX)
+            var gameIdParam = ObjectId(getBodyParamValue(req, GID_IDX))
             var isValid = false
             var gameState = null
             // initialize the winner user id
@@ -218,27 +214,34 @@ app.post('/api/gameState', async (req, res) => {
 app.post('/api/submitMove', async (req, res) => {
     var errMsg = "There was an error.";
 
+    const FROM_COL_IDX = 0;
+    const FROM_ROW_IDX = 1;
+    const TO_ROW_IDX = 3;
+    const GID_IDX = 4;
+    const UID_IDX = 5;
+    const T_IDX = 6;
+    const U_IDX = 7;
+    
     try {
         // get the game move variables
-        const fromColumnId = req.query["fromColumnId"];
-        const fromRowId = req.query["fromRowId"];
-        const toColumnId = req.query["toColumnId"];
-        const toRowId = req.query["toRowId"];
+        const fromColumnId = getBodyParamValue(req, FROM_COL_IDX)
+        const fromRowId = getBodyParamValue(req, FROM_ROW_IDX)
+        const toRowId = getBodyParamValue(req, TO_ROW_IDX)
 
         // validate the parameters
-        if (Object.keys(req.query).length == 8
-            && isValidStringParameter(req.query[GAME_ID_PARAMETER])
-            && ObjectId.isValid(req.query[GAME_ID_PARAMETER])
-            && isValidStringParameter(req.query[USERNAME_PARAMETER])
-            && isValidStringParameter(req.query[TOKEN_PARAMETER])
-            && isValidStringParameter(req.query[USER_ID_PARAMETER])
+        if (req.body.params.updates.length == 8
+            && isValidStringParameter(getBodyParamValue(req, GID_IDX))
+            && ObjectId.isValid(getBodyParamValue(req, GID_IDX))
+            && isValidStringParameter(getBodyParamValue(req, U_IDX))
+            && isValidStringParameter(getBodyParamValue(req, T_IDX))
+            && isValidStringParameter(getBodyParamValue(req, UID_IDX))
             && validateMove(fromColumnId, fromRowId, toColumnId, toRowId)) {
 
             // game identifiers
-            var gameIdParam = ObjectId(req.query[GAME_ID_PARAMETER])
-            var userId = parseInt(req.query[USER_ID_PARAMETER])
-            var token = req.query[TOKEN_PARAMETER]
-            var username = req.query[USERNAME_PARAMETER]
+            var gameIdParam = ObjectId(getBodyParamValue(req, GID_IDX))
+            var userId = parseInt(getBodyParamValue(req, UID_IDX))
+            var token = getBodyParamValue(req, T_IDX)
+            var username = getBodyParamValue(req, U_IDX)
 
             // move status
             var isValid = false
@@ -344,14 +347,17 @@ app.post('/api/submitMove', async (req, res) => {
 app.get('/api/getAllGames', async (req, res) => {
     var errMsg = "There was an error.";
 
+    const UID_IDX = 0;
+    const T_IDX = 1;
+
     try {
-        if (Object.keys(req.query).length == 2
-            && isValidStringParameter(req.query[TOKEN_PARAMETER])
-            && isValidStringParameter(req.query[USER_ID_PARAMETER])) {
+        if (req.body.params.updates.length == 2
+            && isValidStringParameter(getBodyParamValue(req, T_IDX))
+            && isValidStringParameter(getBodyParamValue(req, UID_IDX))) {
 
             // initialize the variables
-            var userId = parseInt(req.query[USER_ID_PARAMETER])
-            var token = req.query[TOKEN_PARAMETER]
+            var userId = parseInt(getBodyParamValue(req, UID_IDX))
+            var token = getBodyParamValue(req, T_IDX)
             var isValid = false
             var gameStates = {}
 
@@ -385,25 +391,79 @@ app.get('/api/getAllGames', async (req, res) => {
     }
 });
 
+
+// create endpoint for users to load all games
+app.get('/api/getLastGame', async (req, res) => {
+    var errMsg = "There was an error.";
+
+    const UID_IDX = 0;
+    const T_IDX = 1;
+
+    try {
+        if (req.body.params.updates.length == 2
+            && isValidStringParameter(getBodyParamValue(req, T_IDX))
+            && isValidStringParameter(getBodyParamValue(req, UID_IDX))) {
+
+            // initialize the variables
+            var userId = parseInt(getBodyParamValue(req, UID_IDX))
+            var token = getBodyParamValue(req, T_IDX)
+            var isValid = false
+            var gameStates = {}
+
+            try {
+                isValid = validateToken(isValid, token, userId);
+
+                // load the game state from the database
+                gameStates = await database.collection(GAMES_COLLECTION_NAME).findOne(lastGameFilter(userId), lastGameConfig())
+            } catch (e) {
+                console.error(e)
+                if (e.name == 'TokenExpiredError') {
+                    errMsg = "Token is expired."
+                }
+                console.error(errMsg)
+            } finally {
+                // if the user was not validated return an error
+                if (!isValid || gameStates == null) {
+                    console.error(errMsg);
+                    res.status(500).send(errMsg);
+                } else {
+                    res.status(200).json(gameStates)
+                }
+            }
+        } else {
+            console.error(errMsg);
+            res.status(500).send("There was an error.");
+        }
+    } catch {
+        console.error(errMsg);
+        res.status(500).send("There was an error.");
+    }
+});
+
 // create endpoint for users to join games
 app.post('/api/joinGame', async (req, res) => {
     var isValid = false
     var errMsg = "There was an error.";
     var gameFound = null
 
+    const GID_IDX = 0;
+    const UID_IDX = 1;
+    const T_IDX = 2;
+    const U_IDX = 3;
+
     try {
-        if (Object.keys(req.query).length == 4
-            && isValidStringParameter(req.query[TOKEN_PARAMETER])
-            && isValidStringParameter(req.query[GAME_ID_PARAMETER])
-            && ObjectId.isValid(req.query[GAME_ID_PARAMETER])
-            && isValidStringParameter(req.query[USERNAME_PARAMETER])
-            && isValidStringParameter(req.query[USER_ID_PARAMETER])) {
+        if (req.body.params.updates.length == 4
+            && isValidStringParameter(getBodyParamValue(req, T_IDX))
+            && isValidStringParameter(getBodyParamValue(req, GID_IDX))
+            && ObjectId.isValid(getBodyParamValue(req, GID_IDX))
+            && isValidStringParameter(getBodyParamValue(req, U_IDX))
+            && isValidStringParameter(getBodyParamValue(req, UID_IDX))) {
 
             //initialize the variables
-            var userId = parseInt(req.query[USER_ID_PARAMETER])
-            var token = req.query[TOKEN_PARAMETER]
-            var username = req.query[USERNAME_PARAMETER]
-            var gameIdParam = ObjectId(req.query[GAME_ID_PARAMETER])
+            var userId = parseInt(getBodyParamValue(req, UID_IDX))
+            var token = getBodyParamValue(req, T_IDX)
+            var username = getBodyParamValue(req, U_IDX)
+            var gameIdParam = ObjectId(getBodyParamValue(req, GID_IDX))
 
             try {
                 // validate the token param
@@ -443,16 +503,20 @@ app.post('/api/joinGame', async (req, res) => {
 app.post('/api/quitGame', async (req, res) => {
     var errMsg = "There was an error.";
 
-    if (Object.keys(req.query).length == 3 
-        && isValidStringParameter(req.query[TOKEN_PARAMETER])
-        && isValidStringParameter(req.query[GAME_ID_PARAMETER])
-        && ObjectId.isValid(req.query[GAME_ID_PARAMETER])
-        && isValidStringParameter(req.query[USER_ID_PARAMETER])) {
+    const GID_IDX = 0;
+    const UID_IDX = 1;
+    const T_IDX = 2;
+
+    if (req.body.params.updates.length == 3 
+        && isValidStringParameter(getBodyParamValue(req, T_IDX))
+        && isValidStringParameter(getBodyParamValue(req, GID_IDX))
+        && ObjectId.isValid(getBodyParamValue(req, GID_IDX))
+        && isValidStringParameter(getBodyParamValue(req, UID_IDX))) {
         
         // initialize the vars
-        var userId = parseInt(req.query[USER_ID_PARAMETER])
-        var token = req.query[TOKEN_PARAMETER]
-        var gameIdParam = ObjectId(req.query[GAME_ID_PARAMETER])
+        var userId = parseInt(getBodyParamValue(req, UID_IDX))
+        var token = getBodyParamValue(req, T_IDX)
+        var gameIdParam = ObjectId(getBodyParamValue(req, GID_IDX))
         var isValid = false
         var gameState = null
 
@@ -512,16 +576,21 @@ app.post('/api/quitGame', async (req, res) => {
 // create endpoint to get a user's game profile
 app.post('/api/getGameProfile', async (req, res) => {
     var errMsg = "There was an error.";
+
+    const UID_IDX = 0;
+    const T_IDX = 1;
+    const U_IDX = 2;
+
     try {
-        if (Object.keys(req.query).length == 3 
-            && isValidStringParameter(req.query[TOKEN_PARAMETER])
-            && isValidStringParameter(req.query[USER_ID_PARAMETER])
-            && isValidStringParameter(req.query[USERNAME_PARAMETER])) {
+        if (req.body.params.updates.length == 3 
+            && isValidStringParameter(getBodyParamValue(req, T_IDX))
+            && isValidStringParameter(getBodyParamValue(req, UID_IDX))
+            && isValidStringParameter(getBodyParamValue(req, U_IDX))) {
 
             // intialize the vars
-            var userId = parseInt(req.query[USER_ID_PARAMETER])
-            var token = req.query[TOKEN_PARAMETER]
-            var username = req.query[USERNAME_PARAMETER]
+            var userId = parseInt(getBodyParamValue(req, UID_IDX))
+            var token = getBodyParamValue(req, T_IDX)
+            var username = getBodyParamValue(req, U_IDX)
             var isValid = false
             var profile = null
 
@@ -652,9 +721,22 @@ function allGameConfig() {
             , sort: ['creationDate'] };
 }
 
+function lastGameConfig() {
+    return { limit: 1
+            , sort: ['creationDate'] };
+}
+
 function allGameFilter(userId) {
     return { br_player: -1
             , w_player: { $ne: userId } };
+}
+
+function lastGameFilter(userId) {
+    return {
+        winner_player: { $eq: null }
+        , $or: [{ w_player: { $eq: userId } }
+              , { br_player: { $eq: userId } }]
+    };
 }
 
 function simpleGameIdFilter(gameIdParam) {
@@ -786,6 +868,10 @@ function validateToken(isValid, token, userId) {
     return isValid;
 }
 
+function getBodyParamValue(req, index) {
+    return req.body.params.updates[index].value;
+}
+
 function isValidStringParameter(parameter) {
-    return parameter != null && parameter.length > 0;
+    return parameter != null && (Number.isSafeInteger(parameter) || parameter.length > 0);
 }

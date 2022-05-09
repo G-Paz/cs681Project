@@ -15,11 +15,9 @@ const { Pool } = pkg;
 
 const webappCert = fs.readFileSync(config.webapp.pem);
 
-const U_PARAM = "username";
-const P_PARAM = "password";
-const ID_PARAM = "userId";
+const U_IDX = 0;
+const P_IDX = 1;
 const ID_IDX = 0;
-const TOKEN_PARAM = "token";
 const TOKEN_IDX = 1;
 
 // configure connection to postgres
@@ -83,15 +81,15 @@ app.post('/iapi/createaccount', async (req, res) => {
     // init the error message
     var errMsg = "There was an error."
     try {
-        if (Object.keys(req.query).length == 2
-            && isValidStringParameter(req.query[U_PARAM])
-            && isValidStringParameter(req.query[P_PARAM])) {
+        if (req.body.params.updates.length == 2
+            && isValidStringParameter(getBodyParamValue(req, U_IDX))
+            && isValidStringParameter(getBodyParamValue(req, P_IDX))) {
             // create salt for new user creating account
             var salt = bcrypt.genSaltSync();
             // extract the valid string parameter
-            var username = req.query[U_PARAM]
+            var username = getBodyParamValue(req, U_IDX)
             // hash the p paramter with the salt
-            var hash = bcrypt.hashSync(req.query[P_PARAM], salt);
+            var hash = bcrypt.hashSync(getBodyParamValue(req, P_IDX), salt);
             // init the user id
             var userId = -1;
             // init the token
@@ -157,11 +155,11 @@ app.post('/iapi/createaccount', async (req, res) => {
 app.post('/iapi/authenticate', async (req, res) => {
     var errMsg = "There was an error."
     try {
-        if (Object.keys(req.query).length == 2
-            && isValidStringParameter(req.query[U_PARAM])
-            && isValidStringParameter(req.query[P_PARAM])) {
-            var username = req.query[U_PARAM];
-            var password = req.query[P_PARAM];
+        if (req.body.params.updates.length == 2
+            && isValidStringParameter(getBodyParamValue(req, U_IDX))
+            && isValidStringParameter(getBodyParamValue(req, P_IDX))) {
+            var username = getBodyParamValue(req, U_IDX);
+            var password = getBodyParamValue(req, P_IDX);
             var userId = -1;
             var role = null;
             var token = null;
@@ -219,11 +217,11 @@ app.post('/iapi/isValidSession', async (req, res) => {
     var errMsg = "There was an error."
     try {
         if (req.body.params.updates.length == 2
-            && isValidStringParameter(req.body.params.updates[ID_IDX].value)
-            && isValidStringParameter(req.body.params.updates[TOKEN_IDX].value)) {
+            && isValidStringParameter(getBodyParamValue(req, ID_IDX))
+            && isValidStringParameter(getBodyParamValue(req, TOKEN_IDX))) {
 
-            var userId = req.body.params.updates[ID_IDX].value;
-            var token = req.body.params.updates[TOKEN_IDX].value;
+            var userId = getBodyParamValue(req, ID_IDX);
+            var token = getBodyParamValue(req, TOKEN_IDX);
             var isValid = false;
 
             try {
@@ -258,6 +256,10 @@ app.post('/iapi/isValidSession', async (req, res) => {
 createServer(server_options, app).listen(server_port, server_hostname, () => {
     console.log(`Server running at http://${server_hostname}:${server_port}/`);
 });
+
+function getBodyParamValue(req, index) {
+    return req.body.params.updates[index].value;
+}
 
 // helper method to varify non-empty parameters
 function isValidStringParameter(parameter) {

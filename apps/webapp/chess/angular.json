@@ -82,7 +82,13 @@
             "sslKey": "./ssl/webapp.key",
             "proxyConfig": "./proxy.config.json",
             "headers": {
-              "X-Powered-By": ""
+              "X-Powered-By": "",
+              "Content-Security-Policy": "default-src 'self' 'unsafe-inline' https://*.cdnjs.cloudflare.com  https://*.www.w3schools.com https://*.localhost:4200/;  connect-src wss://*.localhost:4200/ https://*.localhost:4200/; img-src 'self'; frame-ancestors 'self'; form-action 'self'",
+              "Access-Control-Allow-Origin": "https://localhost:4200/*",
+              "X-Frame-Options": "DENY",
+              "X-Content-Type-Options": "nosniff",
+              "Date": "",
+              "Cache-Control": "no-cache, no-store, must-revalidate"
             }
           },
           "defaultConfiguration": "production"

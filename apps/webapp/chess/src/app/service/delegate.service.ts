@@ -6,6 +6,7 @@ import { Observable } from "rxjs/internal/Observable";
 import { environment } from "src/environments/environment";
 import { Game } from "../model/game/game";
 import { Profile } from "../model/profile";
+import { User } from "../model/user";
 
 const G_PARAM = "gameId";
 const U_PARAM = "userId";
@@ -52,14 +53,34 @@ export class DelegateService {
     this.games = this.allGames.asObservable();
 
     // initialize the game status
-    this.profileSubject = new BehaviorSubject<any>(JSON.parse(sessionStorage.getItem(DelegateService.P_ITEM) + ""));
+    this.profileSubject = new BehaviorSubject<any>(
+      JSON.parse(sessionStorage.getItem(DelegateService.P_ITEM) + "")
+    );
     this.profile = this.profileSubject.asObservable();
+  }
+  
+  public loadGameIfExists(user: User) {
+    return this.http
+      .post<Game>(environment.gs_ep, {
+        params: new HttpParams()
+          .set(U_PARAM, user.id)
+          .set(T_PARAM, user.token)
+      })
+      .subscribe(
+        (res) => {
+          // store user details and jwt token in local storage to keep user logged in between page refreshes
+          this.setGame(res);
+          return res;
+        },
+        (error) => {
+          console.error(error);
+        }
+      );
   }
 
   public getGameState(gameId: number, token: string, userId: number) {
     return this.http
-      .post<Game>(environment.gs_ep, null, {
-        headers: new HttpHeaders(),
+      .post<Game>(environment.gs_ep, {
         params: new HttpParams()
           .set(G_PARAM, gameId)
           .set(U_PARAM, userId)
@@ -79,8 +100,7 @@ export class DelegateService {
 
   public createGameState(token: string, userId: number, username: string) {
     return this.http
-      .post<Game>(environment.cg_ep, null, {
-        headers: new HttpHeaders(),
+      .post<Game>(environment.cg_ep, {
         params: new HttpParams()
           .set(U_PARAM, userId)
           .set(T_PARAM, token)
@@ -104,8 +124,7 @@ export class DelegateService {
     username: string
   ) {
     return this.http
-      .post<Game>(environment.sm_ep, null, {
-        headers: new HttpHeaders(),
+      .post<Game>(environment.sm_ep, {
         params: new HttpParams()
           .set(FC_PARAM, fromColumnId)
           .set(FR_PARAM, fromRowId)
@@ -133,7 +152,6 @@ export class DelegateService {
   public getAllGames(userId: number, token: string) {
     return this.http
       .get<Array<Game>>(environment.gag_ep, {
-        headers: new HttpHeaders(),
         params: new HttpParams().set(U_PARAM, userId).set(T_PARAM, token),
       })
       .subscribe(
@@ -157,8 +175,7 @@ export class DelegateService {
     complete: () => void
   ) {
     return this.http
-      .post<Game>(environment.jg_ep, null, {
-        headers: new HttpHeaders(),
+      .post<Game>(environment.jg_ep, {
         params: new HttpParams()
           .set(G_PARAM, gameId)
           .set(U_PARAM, userId)
@@ -183,8 +200,7 @@ export class DelegateService {
 
   public quitGame(gameId: number, userId: number, token: string) {
     this.http
-      .post<any>(environment.qg_ep, null, {
-        headers: new HttpHeaders(),
+      .post<any>(environment.qg_ep, {
         params: new HttpParams()
           .set(G_PARAM, gameId)
           .set(U_PARAM, userId)
@@ -204,29 +220,32 @@ export class DelegateService {
     this.localQuitGame();
   }
 
-  public getProfile(userId: number, token: string, username: string, complete: () => void, failed: () => void) {
+  public getProfile(
+    userId: number,
+    token: string,
+    username: string,
+    complete: () => void,
+    failed: () => void
+  ) {
     return this.http
-      .post<Profile>(environment.ggp_ep, null, {
-        headers: new HttpHeaders(),
+      .post<Profile>(environment.ggp_ep, {
         params: new HttpParams()
           .set(U_PARAM, userId)
           .set(T_PARAM, token)
           .set(US_PARAM, username),
       })
-      .subscribe(
-        (res) => {
-          console.log(res);
-          if (res!=null && res.username != null) {
-            sessionStorage.setItem(DelegateService.P_ITEM, JSON.stringify(res));
-            this.profileSubject.next(res);
-            complete()
-          } else {
-            this.removeProfile();
-            failed()
-          }
-          return res;
+      .subscribe((res) => {
+        console.log(res);
+        if (res != null && res.username != null) {
+          sessionStorage.setItem(DelegateService.P_ITEM, JSON.stringify(res));
+          this.profileSubject.next(res);
+          complete();
+        } else {
+          this.removeProfile();
+          failed();
         }
-      );
+        return res;
+      });
   }
 
   public get gameValue(): Game {

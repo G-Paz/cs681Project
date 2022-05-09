@@ -13,6 +13,7 @@ import { HistoryComponent } from "./view/history/history.component";
 import { LoginComponent } from "./view/login/login.component";
 import { ProfileComponent } from "./view/profile/profile.component";
 
+
 @NgModule({
   declarations: [
     AppComponent,

@@ -36,10 +36,8 @@ export class IamService {
 
   createAccount(username: string, password: string) {
     return this.http
-      .post<User>(environment.cr_a_ep, null, {
-        params: new HttpParams()
-          .set(US_PARAM, username)
-          .set(P_PARAM, password),
+      .post<User>(environment.cr_a_ep, {
+        params: new HttpParams().set(US_PARAM, username).set(P_PARAM, password),
       })
       .pipe(
         map((user) => {
@@ -58,24 +56,20 @@ export class IamService {
 
   isValidSession(user: User) {
     return this.http
-      .post<Validation>(environment.i_v_ep,{
-        params: new HttpParams()
-          .set(U_PARAM, user.id)
-          .set(T_PARAM, user.token),
+      .post<Validation>(environment.i_v_ep, {
+        params: new HttpParams().set(U_PARAM, user.id).set(T_PARAM, user.token),
       })
       .subscribe((res) => {
-        if (!res.isValid){
-          this.logout()
+        if (!res.isValid) {
+          this.logout();
         }
-      })
+      });
   }
 
   login(username: string, password: string) {
     return this.http
-      .post<User>(environment.a_ep, null, {
-        params: new HttpParams()
-          .set(US_PARAM, username)
-          .set(P_PARAM, password),
+      .post<User>(environment.a_ep, {
+        params: new HttpParams().set(US_PARAM, username).set(P_PARAM, password),
       })
       .pipe(
         map((user) => {
@@ -94,4 +88,3 @@ export class IamService {
     this.router.navigate(["/login"]);
   }
 }
-
