@@ -7,13 +7,19 @@ import {
   UrlTree,
 } from "@angular/router";
 import { Observable } from "rxjs";
+import { DelegateService } from "src/app/service/delegate.service";
 import { IamService } from "../../service/iam.service";
+import { environment } from "src/environments/environment";
 
 @Injectable({
   providedIn: "root",
 })
 export class LinkGuard implements CanActivate {
-  constructor(private router: Router, private iamService: IamService) {}
+  constructor(
+    private router: Router,
+    private iamService: IamService,
+    private delegateService: DelegateService
+  ) {}
   canActivate(
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot

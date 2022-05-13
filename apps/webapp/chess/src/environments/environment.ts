@@ -10,6 +10,7 @@ export const environment = {
   a_ep: "/iapi/authenticate",
 
   // delegate endpoints
+  lg_ep: "/api/getLastGame",
   gs_ep: "/api/gameState",
   cg_ep: "/api/createGame",
   sm_ep: "/api/submitMove",

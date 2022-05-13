@@ -38,7 +38,7 @@ var app = express().use(cors({
 }));
 
 app.use(express.json());
-app.use(express.urlencoded({extended: true}));
+app.use(express.urlencoded({ extended: true }));
 
 app.use((req, res, next) => {
     res.setHeader('X-Frame-Options', 'DENY')
@@ -71,6 +71,10 @@ app.post('/api/createGame', async (req, res) => {
                 isValid = validateToken(isValid, token, userId);
 
                 if (isValid) {
+                    // quit the active games previously in
+                    await database.collection(GAMES_COLLECTION_NAME).update(otherGamesFilterAsBr(userId), quitExistingGameUpdatesOtherGamesFilterAsBr())
+                    await database.collection(GAMES_COLLECTION_NAME).update(otherGamesFilterAsW(userId), quitExistingGameUpdatesOtherGamesFilterAsW())
+
                     // configure the initial game
                     gameState = Object.assign({}, queries.INIT_GAME_STATE_TEMPLATE_JSON)
                     gameState['w_player'] = userId
@@ -221,7 +225,7 @@ app.post('/api/submitMove', async (req, res) => {
     const UID_IDX = 5;
     const T_IDX = 6;
     const U_IDX = 7;
-    
+
     try {
         // get the game move variables
         const fromColumnId = getBodyParamValue(req, FROM_COL_IDX)
@@ -344,7 +348,7 @@ app.post('/api/submitMove', async (req, res) => {
 });
 
 // create endpoint for users to load all games
-app.get('/api/getAllGames', async (req, res) => {
+app.post('/api/getAllGames', async (req, res) => {
     var errMsg = "There was an error.";
 
     const UID_IDX = 0;
@@ -393,7 +397,7 @@ app.get('/api/getAllGames', async (req, res) => {
 
 
 // create endpoint for users to load all games
-app.get('/api/getLastGame', async (req, res) => {
+app.post('/api/getLastGame', async (req, res) => {
     var errMsg = "There was an error.";
 
     const UID_IDX = 0;
@@ -423,7 +427,7 @@ app.get('/api/getLastGame', async (req, res) => {
                 console.error(errMsg)
             } finally {
                 // if the user was not validated return an error
-                if (!isValid || gameStates == null) {
+                if (!isValid) {
                     console.error(errMsg);
                     res.status(500).send(errMsg);
                 } else {
@@ -469,8 +473,12 @@ app.post('/api/joinGame', async (req, res) => {
                 // validate the token param
                 isValid = validateToken(isValid, token, userId);
 
+                // quit the active games previously in
+                await database.collection(GAMES_COLLECTION_NAME).update(otherGamesFilterAsBr(userId,gameIdParam), quitExistingGameUpdatesOtherGamesFilterAsBr())
+                await database.collection(GAMES_COLLECTION_NAME).update(otherGamesFilterAsW(userId,gameIdParam), quitExistingGameUpdatesOtherGamesFilterAsW())
+
                 // filter by game and by ones that still have the w_player as -1 - game not started
-                var dbState = await database.collection(GAMES_COLLECTION_NAME).updateOne(getJoinGameFilter(gameIdParam), getJoinGameUpdates(userId, username))
+                var dbState = await database.collection(GAMES_COLLECTION_NAME).updateOne(getJoinGameFilter(gameIdParam, userId), getJoinGameUpdates(userId, username))
 
                 // check if by the time we update the db entry, another user has not updated the same entry
                 if (!dbState['acknowledged'] || dbState['matchedCount'] == 0) {
@@ -507,12 +515,12 @@ app.post('/api/quitGame', async (req, res) => {
     const UID_IDX = 1;
     const T_IDX = 2;
 
-    if (req.body.params.updates.length == 3 
+    if (req.body.params.updates.length == 3
         && isValidStringParameter(getBodyParamValue(req, T_IDX))
         && isValidStringParameter(getBodyParamValue(req, GID_IDX))
         && ObjectId.isValid(getBodyParamValue(req, GID_IDX))
         && isValidStringParameter(getBodyParamValue(req, UID_IDX))) {
-        
+
         // initialize the vars
         var userId = parseInt(getBodyParamValue(req, UID_IDX))
         var token = getBodyParamValue(req, T_IDX)
@@ -582,7 +590,7 @@ app.post('/api/getGameProfile', async (req, res) => {
     const U_IDX = 2;
 
     try {
-        if (req.body.params.updates.length == 3 
+        if (req.body.params.updates.length == 3
             && isValidStringParameter(getBodyParamValue(req, T_IDX))
             && isValidStringParameter(getBodyParamValue(req, UID_IDX))
             && isValidStringParameter(getBodyParamValue(req, U_IDX))) {
@@ -692,50 +700,84 @@ function configureSucessfulGameStateResponse(res, gameState) {
 // --------- Query filters, configs, and updates --------- //
 
 function gameAsWFilter(username) {
-    return { w_player_username: username
-            , winner_player: { $ne: null } };
+    return {
+        w_player_username: username
+        , winner_player: { $ne: null }
+    };
 }
 
 function gameAsBrFilter(username) {
-    return { br_player_username: username
-            , winner_player: { $ne: null } };
+    return {
+        br_player_username: username
+        , winner_player: { $ne: null }
+    };
 }
 
-function getJoinGameFilter(gameIdParam) {
-    return { _id: gameIdParam
-            , br_player: -1 };
+function getJoinGameFilter(gameIdParam, userId) {
+    return {
+        _id: gameIdParam
+        , $or: [  { w_player: { $in: [userId] } }
+                , { br_player: { $in: [userId, -1]} }]
+        , winner_player: { $eq: null }
+        , winner_player_username: { $eq: null }
+    };
 }
 
 function deleteExistingUnstartedGameFilter(gameIdParam) {
-    return { _id: gameIdParam
-            , br_player: -1 };
+    return {
+        _id: gameIdParam
+        , br_player: -1
+    };
 }
 
 function quitExistingGameFilter(gameIdParam) {
-    return { _id: gameIdParam
-            , winner_player: { $eq: null } };
+    return {
+        _id: gameIdParam
+        , winner_player: { $eq: null }
+    };
 }
 
 function allGameConfig() {
-    return { limit: GAME_RETURN_LIMIT
-            , sort: ['creationDate'] };
+    return {
+        limit: GAME_RETURN_LIMIT
+        , sort: ['creationDate']
+    };
 }
 
 function lastGameConfig() {
-    return { limit: 1
-            , sort: ['creationDate'] };
+    return {
+        limit: 1
+        , sort: ['creationDate']
+    };
 }
 
 function allGameFilter(userId) {
-    return { br_player: -1
-            , w_player: { $ne: userId } };
+    return {
+        br_player: -1
+        , w_player: { $ne: userId }
+    };
 }
 
 function lastGameFilter(userId) {
     return {
         winner_player: { $eq: null }
         , $or: [{ w_player: { $eq: userId } }
-              , { br_player: { $eq: userId } }]
+            , { br_player: { $eq: userId } }]
+    };
+}
+
+function otherGamesFilterAsW(userId, gameId) {
+    return {
+        winner_player: { $eq: null }
+        , w_player: { $eq: userId }
+    };
+}
+
+function otherGamesFilterAsBr(userId, gameId) {
+    return {
+        winner_player: { $eq: null }
+        , br_player: { $eq: userId }
+        , _id: { $ne: gameId }
     };
 }
 
@@ -744,45 +786,84 @@ function simpleGameIdFilter(gameIdParam) {
 }
 
 function checkmateFilter(gameIdParam) {
-    return { _id: gameIdParam
-            , winner_player: null };
+    return {
+        _id: gameIdParam
+        , winner_player: null
+    };
 }
 
 function timeOutFilter(gameIdParam, current_player_id) {
-    return { _id: gameIdParam
-            , winner_player: { $eq: null }
-            , br_player: { $nin: [-1, null] }
-            , w_player: { $ne: null }
-            , lastModified: { $lt: new Date(new Date() - MOVE_TIME_LIMIT_MILISECONDS) } };
+    return {
+        _id: gameIdParam
+        , winner_player: { $eq: null }
+        , br_player: { $nin: [-1, null] }
+        , w_player: { $ne: null }
+        , lastModified: { $lt: new Date(new Date() - MOVE_TIME_LIMIT_MILISECONDS) }
+    };
 }
 
 function resetTimeOutFilter(gameIdParam) {
-    return { _id: gameIdParam
-            , winner_player: { $eq: null }
-            , br_player: { $eq: -1 } };
+    return {
+        _id: gameIdParam
+        , winner_player: { $eq: null }
+        , br_player: { $eq: -1 }
+    };
 }
 
 function allSingleUserGamesLostAsW(username) {
-    return { w_player_username: { $eq: username }
-            , winner_player_username: { $nin: [username, null] } }
+    return {
+        w_player_username: { $eq: username }
+        , winner_player_username: { $nin: [username, null] }
+    }
 }
 
 function allSingleUserGamesLostAsBr(username) {
-    return { br_player_username: { $eq: username }
-            , winner_player_username: { $nin: [username, null] } }
+    return {
+        br_player_username: { $eq: username }
+        , winner_player_username: { $nin: [username, null] }
+    }
 }
 
 // --------- Update functions --------- //
 
 function getJoinGameUpdates(userId, username) {
-    return { $set: { br_player: userId
-                    , br_player_username: username } };
+    return {
+        $set: {
+            br_player: userId
+            , br_player_username: username
+            , lastModified: new Date()
+        }
+    };
 }
 
 function quitExistingGameUpdates(winner, winner_username) {
-    return { $set: { winner_player: winner
-                    , winner_player_username: winner_username
-                    , winner_by: 'Player quit' } };
+    return {
+        $set: {
+            winner_player: winner
+            , winner_player_username: winner_username
+            , winner_by: 'Player quit'
+        }
+    };
+}
+
+function quitExistingGameUpdatesOtherGamesFilterAsBr() {
+    return {
+        "$set": {
+            "winner_player": "$w_player"
+            , "winner_player_username": "$w_player_username"
+            , "winner_by": 'Player quit'
+        }
+    };
+}
+
+function quitExistingGameUpdatesOtherGamesFilterAsW() {
+    return {
+        "$set": {
+            "winner_player": "$br_player"
+            , "winner_player_username": "$br_player_username"
+            , "winner_by": 'Player quit'
+        }
+    };
 }
 
 function makeBoardMove(chessBoard, fromColumnId, fromRowId, toColumnId, toRowId) {
@@ -790,20 +871,28 @@ function makeBoardMove(chessBoard, fromColumnId, fromRowId, toColumnId, toRowId)
 }
 
 function checkmateUpdates(chessBoard, gameState, newCurrentUserId, winner, won_by, winner_username) {
-    return { $set: { fenState: chessBoard.fen()
-                    , state: gameState['state']
-                    , history: gameState['history']
-                    , current_player: newCurrentUserId
-                    , lastModified: new Date()
-                    , winner_player: winner
-                    , winner_player_username: winner_username
-                    , winner_by: won_by } };
+    return {
+        $set: {
+            fenState: chessBoard.fen()
+            , state: gameState['state']
+            , history: gameState['history']
+            , current_player: newCurrentUserId
+            , lastModified: new Date()
+            , winner_player: winner
+            , winner_player_username: winner_username
+            , winner_by: won_by
+        }
+    };
 }
 
 function timeOutUpdates(winner, winner_username) {
-    return { $set: { winner_player: winner
-                    , winner_player_username: winner_username
-                    , winner_by: 'Player timed-out' } };
+    return {
+        $set: {
+            winner_player: winner
+            , winner_player_username: winner_username
+            , winner_by: 'Player timed-out'
+        }
+    };
 }
 
 function resetTimeOutUpdates() {

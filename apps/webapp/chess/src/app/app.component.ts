@@ -2,6 +2,7 @@ import { Component } from "@angular/core";
 import { Router } from "@angular/router";
 import { interval } from "rxjs/internal/observable/interval";
 import { Subscription } from "rxjs/internal/Subscription";
+import { environment } from "src/environments/environment";
 import { Game } from "./model/game/game";
 import { Role } from "./model/role";
 import { User } from "./model/user";
@@ -21,7 +22,7 @@ export class AppComponent {
   user: User;
   game: Game;
   logoutHandler: Subscription;
-  timeoutTime: Date
+  timeoutTime: Date;
 
   constructor(
     private iamService: IamService,
@@ -38,40 +39,45 @@ export class AppComponent {
 
     // determine the page that should be loaded based on the objects set
     if (this.user) {
-      if (this.game) {
-        this.router.navigate(["/gamestate"]);
-      }
     } else {
       this.router.navigate(["/login"]);
     }
-    
+
     // initialize the timeout time
     this.timeoutTime = getNewTimeOutTime();
     // set the onload function to reset the timer
-    window.onload = this.resetTimer
+    window.onload = this.resetTimer;
     // add the listener to reset the timer when the user moves the mouse
-    document.addEventListener("mousemove", this.resetTimer)
+    document.addEventListener("mousemove", this.resetTimer);
     // initialize game refresh
     this.logoutHandler = interval(LOGOUT_REFRESH_RATE).subscribe((int) => {
-      if (this.timeoutTime.getTime() < Date.now()) {
+      if (this.user && this.timeoutTime.getTime() < Date.now()) {
         alert("You have been logged out.");
         console.error("the user has been logged out");
-        this.logout()
+        this.logout();
+      } else {
+        this.resetTimer();
       }
     });
+
+    if(this.iamService.userValue != null){
+      this.iamService.isValidSession(this.iamService.userValue);
+    }
   }
 
-  private resetTimer(){
+  private resetTimer() {
     this.timeoutTime = getNewTimeOutTime();
   }
 
   ngOnInit() {
-    this.iamService.isValidSession(this.user);
-    this.delegateService.loadGameIfExists(this.user)
+    if(this.iamService.userValue != null){
+      this.iamService.isValidSession(this.iamService.userValue);
+    }
   }
 
+
   logout() {
-    if(this.game){
+    if (this.game) {
       this.delegateService.logout(this.game._id, this.user.id, this.user.token);
     }
     this.iamService.logout();
@@ -96,4 +102,3 @@ export class AppComponent {
 function getNewTimeOutTime(): Date {
   return new Date(Date.now() + LOGOUT_LIMIT);
 }
-

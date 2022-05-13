@@ -3,7 +3,7 @@ import { GameRow } from "./state/game-row";
 
 export class Game {
   constructor(
-    public _id: number,
+    public _id: string,
     public br_player: number,
     public w_player: number,
     public current_player: 1,

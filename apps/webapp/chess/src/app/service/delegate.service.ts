@@ -36,6 +36,8 @@ export class DelegateService {
   public games: Observable<Array<Game>>;
   public profileSubject: BehaviorSubject<any>;
   public profile: Observable<Profile>;
+  public lastGameSubject: BehaviorSubject<any>;
+  public lastGame: Observable<string>;
 
   constructor(private router: Router, private http: HttpClient) {
     //initialize the game from the one stored in the browser
@@ -57,19 +59,24 @@ export class DelegateService {
       JSON.parse(sessionStorage.getItem(DelegateService.P_ITEM) + "")
     );
     this.profile = this.profileSubject.asObservable();
+
+    // initialize the game status
+    this.lastGameSubject = new BehaviorSubject<any>(null);
+    this.lastGame = this.lastGameSubject.asObservable();
   }
   
   public loadGameIfExists(user: User) {
     return this.http
-      .post<Game>(environment.gs_ep, {
+      .post<Game>(environment.lg_ep, {
         params: new HttpParams()
           .set(U_PARAM, user.id)
           .set(T_PARAM, user.token)
       })
       .subscribe(
         (res) => {
-          // store user details and jwt token in local storage to keep user logged in between page refreshes
-          this.setGame(res);
+          if(res !=null && res['_id'] != null){
+            this.lastGameSubject.next(res['_id'])
+          }
           return res;
         },
         (error) => {
@@ -78,7 +85,7 @@ export class DelegateService {
       );
   }
 
-  public getGameState(gameId: number, token: string, userId: number) {
+  public getGameState(gameId: string, token: string, userId: number) {
     return this.http
       .post<Game>(environment.gs_ep, {
         params: new HttpParams()
@@ -118,7 +125,7 @@ export class DelegateService {
     fromRowId: number,
     toColumnId: string,
     toRowId: number,
-    gameId: number,
+    gameId: string,
     token: string,
     userId: number,
     username: string
@@ -151,7 +158,7 @@ export class DelegateService {
 
   public getAllGames(userId: number, token: string) {
     return this.http
-      .get<Array<Game>>(environment.gag_ep, {
+      .post<Array<Game>>(environment.gag_ep, {
         params: new HttpParams().set(U_PARAM, userId).set(T_PARAM, token),
       })
       .subscribe(
@@ -168,7 +175,7 @@ export class DelegateService {
   }
 
   public joinGame(
-    gameId: number,
+    gameId: string,
     userId: number,
     token: string,
     username: string,
@@ -198,7 +205,7 @@ export class DelegateService {
       );
   }
 
-  public quitGame(gameId: number, userId: number, token: string) {
+  public quitGame(gameId: string, userId: number, token: string) {
     this.http
       .post<any>(environment.qg_ep, {
         params: new HttpParams()
@@ -271,7 +278,7 @@ export class DelegateService {
     sessionStorage.removeItem(DelegateService.P_ITEM);
   }
 
-  public logout(gameId: number, userId: number, token: string) {
+  public logout(gameId: string, userId: number, token: string) {
     if (gameId) {
       this.quitGame(gameId, userId, token);
     } else {
