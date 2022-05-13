@@ -29,7 +29,6 @@ export class FindGameComponent implements OnInit {
     this.joinStatus = ''
 
     this.delegateService.lastGame.subscribe((x) => {
-      console.log("1234123412")
       this.lastGame = x;
     });
   }

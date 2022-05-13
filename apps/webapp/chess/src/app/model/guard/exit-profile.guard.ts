@@ -15,19 +15,22 @@ import { DelegateService } from "src/app/service/delegate.service";
 })
 export class ExitProfileGuard implements CanDeactivate<unknown> {
   subscription: any;
-  constructor(private delegateService: DelegateService, private router: Router) {
+  constructor(
+    private delegateService: DelegateService,
+    private router: Router
+  ) {
     this.subscription = this.router.events.subscribe((event) => {
-      if (event instanceof NavigationStart && event.url != '/profile') {
-        this.delegateService.removeProfile()
+      if (event instanceof NavigationStart && event.url != "/profile") {
+        this.delegateService.removeProfile();
       }
-  });
+    });
   }
   canDeactivate():
     | Observable<boolean | UrlTree>
     | Promise<boolean | UrlTree>
     | boolean
     | UrlTree {
-      this.delegateService.removeProfile()
+    this.delegateService.removeProfile();
     return true;
   }
 }

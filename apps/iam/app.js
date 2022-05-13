@@ -254,7 +254,7 @@ app.post('/iapi/isValidSession', async (req, res) => {
 
 // create and start the server
 createServer(server_options, app).listen(server_port, server_hostname, () => {
-    console.log(`Server running at http://${server_hostname}:${server_port}/`);
+    console.log(`Server running at https://${server_hostname}:${server_port}/`);
 });
 
 function getBodyParamValue(req, index) {
