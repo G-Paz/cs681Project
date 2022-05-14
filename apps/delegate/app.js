@@ -7,8 +7,6 @@ import express from 'express';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import Chess from 'chess.js'
-import cookieParser from 'cookie-parser';
-import csurf from 'csurf';
 const webappCert = fs.readFileSync(config.webapp.pem);
 
 // Connection URL to the database
