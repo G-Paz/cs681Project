@@ -174,16 +174,18 @@ The sixth endpoint is '/api/joinGame'. This endpoint provides the front-end the 
 The seventh endpoint is '/api/quitGame'. This provides the front-end the ability for users to quit games. It takes 3 parameters, the session token, game id, and the user id - which are all validated. First the token is validated - similar to the other endpoints. Then if the game has not started the game is deleted from the database - again guranteed given MongoDB provides monotonic write guarantees. If the game has already started the user that is currently quitting the game is marked as the loser in the game state entry and then the game is returned to the front-end. If the application fails to update the game state then the other player has quit the game before the one making this request, and in this case an error response is returned to the front-end.
 
 The eigth endpoint is '/api/getGameProfile'. This provides the front-end the ability for users to load game profile for users - themselves and others - which contains their win/loss statistics, previous games, and their game state history. It takes 3 parameters, the session token, the user id making the request, and the username we're looking for - which are all validated. First the token is validated - similar to the other endpoints. Next the games the user with that match the username parameter are loaded. The wins and losses are then calculated. Then the profile object is configured and returned to the front-end. If matches do not exist for a user matching the username parameter, an empty object is returned to the front-end.
-\maketitle
+
 \section{Installation Instructions}
 
-\maketitle
 \section{Operation Instructions}
 
-\maketitle
 \section{Game Rules}
+Referencing: https://www.chess.com/learn-how-to-play-chess.\\\\
+This is a board game on a 8x8 board. The pieces start off with pieces on the first and second row. The first row starts off configured with the rook as the first piece of the row, then the knight, then the bishop, then the king, then the queen, then bishop, knight, and rook - completing the first row. Then the second row is full of pawns. The last 2 rows will mirror the first two rows. The goal of the game is to capture the other player's king - capturing is done by moving one's piece onto the same position as the king without another piece intervening nor the king moving from its position.
 
-\maketitle
+Each of the these different pieces have their own move patterns. The king is able to move left, right, up, down exactly one space. The king has a special case in which it must be moved or protected when it is in check - indicating the king can be removed by another piece. The queen is able to move however many positions across the board diagonally, up, down, left, or right as long as it does not jump over pieces. The rook can only move up, down, left, or right as many postitions as long as it does not jump over pieces. The knight may only move to positions that are 2 positions left/right and 3 positions up/down or 2 positions up/down and 3 positions left/right away from its current positions. The bishop may only move diagonally and only on positions that have the same color as the one it started on - guaranteed by the diagonal only move constraint - and it cannot jump over other pieces. Finally the pawn may move forward 2 positions on its first move if it does not jump over other pieces. Otherwise it may only move 1 poisition forward and has the ability to move diagonally forward 1 position only if it is removing another piece.
+
+
 \section{Why is it secure?}
 
 \end{document}
