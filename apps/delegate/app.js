@@ -218,6 +218,7 @@ app.post('/api/submitMove', async (req, res) => {
 
     const FROM_COL_IDX = 0;
     const FROM_ROW_IDX = 1;
+    const TO_COL_IDX = 2;
     const TO_ROW_IDX = 3;
     const GID_IDX = 4;
     const UID_IDX = 5;
@@ -228,6 +229,7 @@ app.post('/api/submitMove', async (req, res) => {
         // get the game move variables
         const fromColumnId = getBodyParamValue(req, FROM_COL_IDX)
         const fromRowId = getBodyParamValue(req, FROM_ROW_IDX)
+        const toColumnId = getBodyParamValue(req, TO_COL_IDX)
         const toRowId = getBodyParamValue(req, TO_ROW_IDX)
 
         // validate the parameters
