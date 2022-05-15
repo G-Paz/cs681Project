@@ -57,7 +57,7 @@ app.post('/api/createGame', async (req, res) => {
         if (req.body.params.updates.length == 3
             && isValidStringParameter(getBodyParamValue(req, T_IDX))
             && isValidStringParameter(getBodyParamValue(req, UID_IDX))
-            && isValidStringParameter(getBodyParamValue(req, U_IDX))) {
+            && isValidStringUsername(getBodyParamValue(req, U_IDX))) {
             // intialize variables
             var userId = parseInt(getBodyParamValue(req, UID_IDX))
             var token = getBodyParamValue(req, T_IDX)
@@ -236,7 +236,7 @@ app.post('/api/submitMove', async (req, res) => {
         if (req.body.params.updates.length == 8
             && isValidStringParameter(getBodyParamValue(req, GID_IDX))
             && ObjectId.isValid(getBodyParamValue(req, GID_IDX))
-            && isValidStringParameter(getBodyParamValue(req, U_IDX))
+            && isValidStringUsername(getBodyParamValue(req, U_IDX))
             && isValidStringParameter(getBodyParamValue(req, T_IDX))
             && isValidStringParameter(getBodyParamValue(req, UID_IDX))
             && validateMove(fromColumnId, fromRowId, toColumnId, toRowId)) {
@@ -460,7 +460,7 @@ app.post('/api/joinGame', async (req, res) => {
             && isValidStringParameter(getBodyParamValue(req, T_IDX))
             && isValidStringParameter(getBodyParamValue(req, GID_IDX))
             && ObjectId.isValid(getBodyParamValue(req, GID_IDX))
-            && isValidStringParameter(getBodyParamValue(req, U_IDX))
+            && isValidStringUsername(getBodyParamValue(req, U_IDX))
             && isValidStringParameter(getBodyParamValue(req, UID_IDX))) {
 
             //initialize the variables
@@ -474,8 +474,8 @@ app.post('/api/joinGame', async (req, res) => {
                 isValid = validateToken(isValid, token, userId);
 
                 // quit the active games previously in
-                await database.collection(GAMES_COLLECTION_NAME).update(otherGamesFilterAsBr(userId,gameIdParam), quitExistingGameUpdatesOtherGamesFilterAsBr())
-                await database.collection(GAMES_COLLECTION_NAME).update(otherGamesFilterAsW(userId,gameIdParam), quitExistingGameUpdatesOtherGamesFilterAsW())
+                await database.collection(GAMES_COLLECTION_NAME).update(otherGamesFilterAsBr(userId, gameIdParam), quitExistingGameUpdatesOtherGamesFilterAsBr())
+                await database.collection(GAMES_COLLECTION_NAME).update(otherGamesFilterAsW(userId, gameIdParam), quitExistingGameUpdatesOtherGamesFilterAsW())
 
                 // filter by game and by ones that still have the w_player as -1 - game not started
                 var dbState = await database.collection(GAMES_COLLECTION_NAME).updateOne(getJoinGameFilter(gameIdParam, userId), getJoinGameUpdates(userId, username))
@@ -593,7 +593,7 @@ app.post('/api/getGameProfile', async (req, res) => {
         if (req.body.params.updates.length == 3
             && isValidStringParameter(getBodyParamValue(req, T_IDX))
             && isValidStringParameter(getBodyParamValue(req, UID_IDX))
-            && isValidStringParameter(getBodyParamValue(req, U_IDX))) {
+            && isValidStringUsername(getBodyParamValue(req, U_IDX))) {
 
             // intialize the vars
             var userId = parseInt(getBodyParamValue(req, UID_IDX))
@@ -716,8 +716,8 @@ function gameAsBrFilter(username) {
 function getJoinGameFilter(gameIdParam, userId) {
     return {
         _id: gameIdParam
-        , $or: [  { w_player: { $in: [userId] } }
-                , { br_player: { $in: [userId, -1]} }]
+        , $or: [{ w_player: { $in: [userId] } }
+            , { br_player: { $in: [userId, -1] } }]
         , winner_player: { $eq: null }
         , winner_player_username: { $eq: null }
     };
@@ -963,4 +963,9 @@ function getBodyParamValue(req, index) {
 
 function isValidStringParameter(parameter) {
     return parameter != null && (Number.isSafeInteger(parameter) || parameter.length > 0);
+}
+
+// helper method to varify non-empty parameters
+function isValidStringUsername(username) {
+    return username != null && new RegExp('^[a-zA-Z0-9]{3,30}$').test(username);
 }

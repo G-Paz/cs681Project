@@ -19,7 +19,12 @@
 I, Gustavo A. Paz, created a network-enabled Chess game system that can be played 
 through web browsers, securely. Users are able to create accounts, create 
 and join Chess games to play against others, and search for players 
-to see their game history and win/loss statistics. 
+to see their game history and win/loss statistics. \\
+
+My computer was not recording my voice so I created a separate recording of me going through what I'm demoing. I split the video into two parts - forgot to demo a part.\\
+Demo Audio: \url{https://gmuedu-my.sharepoint.com/:u:/g/personal/gpaz4_gmu_edu/EdPupMfWLOZAtdJX1Kc0cDYByrqnKOlZk6s-Kp-KIXwTtw?e=bmQQsZ}\\
+Video Part 1: \url{https://gmuedu-my.sharepoint.com/:v:/g/personal/gpaz4_gmu_edu/EQn5BKxMhQ1LsYL9BzGBt34BzLetev_MpM_YWejJbHD55g?e=Z5Ob1l}\\
+Video Part 2: \url{https://gmuedu-my.sharepoint.com/:v:/g/personal/gpaz4_gmu_edu/EXVnPYx1J_9BpuT1AqFeUs0BYXAe9-9T83E16fUX5NMWKw?e=ick3Qc}\\
 \maketitle
 \section{Design Architecture}
 I broke down the game system into 5 different components. The first was the front-end 
@@ -120,7 +125,6 @@ roles for the application, for this application there is one, 'Hikaru'. Next is 
 Next we have the  user table which stores the user information such as the username and creation date. Finally we have the user sec 
 table which stores the passwords for accounts and the salts used to generate the passwords. As in the diagram below, there are 
 foreign key, not-null constraints, and unique constraints to ensure the data is consistent.
-
 \begin{figure}[h!]
     \includegraphics[width=\linewidth]{postgres.png}
     \caption{ER Diagram}
@@ -244,6 +248,92 @@ Github: https://github.com/snyk/cli\\
 Scans projects and depenecies for security vulnerabilities.
 
 \section{Operation Instructions}
+\subsubsection{Login Page}
+When the website is first visited by a user they will see the login screen which'll prompt them to 
+enter a password and username. Once the user enters a valid username and password for an existing user the 
+user will be redirected to the home screen.
+\begin{figure}[h!]
+    \includegraphics[width=\linewidth]{LOGIN.png}
+    \caption{Login Page}
+\end{figure}
+
+\subsubsection{Create Account Page}
+If the user does not have an account they can click the 'Create Account' button to be redirected to the 
+create account page. The users are prompted to enter a username and password for the new account.
+\begin{figure}[h!]
+    \includegraphics[width=\linewidth]{CREATE_ACCOUNT.png}
+    \caption{Create Account Page}
+\end{figure}
+
+\subsubsection{Home Page}
+Once the user signs in they will see the home page. Where they will have the option to see their profile, find a new game, create a new game, find a user, or logout. If the user does not move their mouse throughout the app they will be signed out.
+\begin{figure}[h!]
+    \includegraphics[width=\linewidth]{HOME_PAGE_ONCE_LOGGED_IN.png}
+    \caption{Home Page}
+\end{figure}
+
+\subsubsection{Profile Screen}
+This page displays the games the player has played with the option to see the game history - what was moved where. If the user clicks the 'View Game History' button they are redirected to the game history page.
+\begin{figure}[h!]
+    \includegraphics[width=\linewidth]{OTHER_PLAYER_PROFILE.png}
+    \caption{Profile Page}
+\end{figure}
+
+\subsubsection{Game History Page}
+This page shows what pieces where in ascending move order for a game.
+\begin{figure}[h!]
+    \includegraphics[width=\linewidth]{GAME_HISTORY.png}
+    \caption{Game History Page}
+\end{figure}
+
+\subsubsection{Find User Page}
+When the user clicks the 'Find User' link on the top bar they are redirected to this page to search for other users.
+\begin{figure}[h!]
+    \includegraphics[width=\linewidth]{SEARCH_FOR_USER.png}
+    \caption{Find User Page}
+\end{figure}
+
+\subsubsection{Find Game Page}
+When the user clicks the 'Find Game' link on the top bar they are redirected to this page to search for games waiting for users to join.
+\begin{figure}[h!]
+    \includegraphics[width=\linewidth]{FINDING_A_GAME.png}
+    \caption{Find Game Page}
+\end{figure}
+
+\subsubsection{Waiting for Other Player To Join Page}
+When the user clicks the 'New Game' link on the top bar they are redirected to this page to create a new game.
+\begin{figure}[h!]
+    \includegraphics[width=\linewidth]{WAITING_FOR_USER_TO_JOIN_GAME.png}
+    \caption{Wait fo Other Player Page}
+\end{figure}
+
+\subsubsection{Waiting for Other Player To Make Move Page}
+When a user joins a game and is waiting for the othe player to make a move.
+\begin{figure}[h!]
+    \includegraphics[width=\linewidth]{PLAYER_WAITING_FOR_OTHER_TO_MAKE_MOVE_AFTER_MAKIN_MOVE.png}
+    \caption{Find Game Page}
+\end{figure}
+
+\subsubsection{Making a Move Page}
+When a user joins a game and is going to make a move.
+\begin{figure}[h!]
+    \includegraphics[width=\linewidth]{MAKING_MOVE.png}
+    \caption{Find Game Page}
+\end{figure}
+
+\subsubsection{End of Game Page}
+When a user joins a game and a player quits/wins this page is displayed with the game state.
+\begin{figure}[h!]
+    \includegraphics[width=\linewidth]{PLAYER_WON_PLAYER_QUIT.png}
+    \caption{Find Game Page}
+\end{figure}
+
+\subsubsection{End of Game With Player Time-out Page}
+When a user joins a game and a player takes too long to make a move.
+\begin{figure}[h!]
+    \includegraphics[width=\linewidth]{PLAYER_TIMED_OUT.png}
+    \caption{Find Game Page}
+\end{figure}
 
 \section{Game Rules}
 Referencing: https://www.chess.com/learn-how-to-play-chess.\\\\
@@ -252,5 +342,6 @@ This is a board game on a 8x8 board. The pieces start off with pieces on the fir
 Each of the these different pieces have their own move patterns. The king is able to move left, right, up, down exactly one space. The king has a special case in which it must be moved or protected when it is in check - indicating the king can be removed by another piece. The queen is able to move however many positions across the board diagonally, up, down, left, or right as long as it does not jump over pieces. The rook can only move up, down, left, or right as many postitions as long as it does not jump over pieces. The knight may only move to positions that are 2 positions left/right and 3 positions up/down or 2 positions up/down and 3 positions left/right away from its current positions. The bishop may only move diagonally and only on positions that have the same color as the one it started on - guaranteed by the diagonal only move constraint - and it cannot jump over other pieces. Finally the pawn may move forward 2 positions on its first move if it does not jump over other pieces. Otherwise it may only move 1 poisition forward and has the ability to move diagonally forward 1 position only if it is removing another piece.
 
 \section{Why is it secure?}
+The AssuranceCase.pdf file in report/ contains the assurance case and arguments as to why this system is secure.
 
 \end{document}

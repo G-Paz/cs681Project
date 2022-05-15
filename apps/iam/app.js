@@ -67,7 +67,7 @@ var app = express().use(cors({
 }));
 
 app.use(express.json());
-app.use(express.urlencoded({extended: true}));
+app.use(express.urlencoded({ extended: true }));
 
 app.use((req, res, next) => {
     res.setHeader('X-Frame-Options', 'DENY')
@@ -80,20 +80,21 @@ app.use((req, res, next) => {
 app.post('/iapi/createaccount', async (req, res) => {
     // init the error message
     var errMsg = "There was an error."
+    // init the user id
+    var userId = -1;
+    // init the token
+    var token = null;
+
     try {
         if (req.body.params.updates.length == 2
-            && isValidStringParameter(getBodyParamValue(req, U_IDX))
-            && isValidStringParameter(getBodyParamValue(req, P_IDX))) {
+            && isValidStringUsername(getBodyParamValue(req, U_IDX))
+            && isValidStringPassword(getBodyParamValue(req, P_IDX))) {
             // create salt for new user creating account
             var salt = bcrypt.genSaltSync();
             // extract the valid string parameter
             var username = getBodyParamValue(req, U_IDX)
             // hash the p paramter with the salt
             var hash = bcrypt.hashSync(getBodyParamValue(req, P_IDX), salt);
-            // init the user id
-            var userId = -1;
-            // init the token
-            var token = null;
 
             // make connection to db
             await pool.connect()
@@ -145,7 +146,7 @@ app.post('/iapi/createaccount', async (req, res) => {
             console.error(errMsg);
             res.status(500).send("Unable to create account.");
         }
-    } finally {
+    } catch {
         console.error(errMsg);
         res.status(500).send("Unable to create account.");
     }
@@ -156,8 +157,8 @@ app.post('/iapi/authenticate', async (req, res) => {
     var errMsg = "There was an error."
     try {
         if (req.body.params.updates.length == 2
-            && isValidStringParameter(getBodyParamValue(req, U_IDX))
-            && isValidStringParameter(getBodyParamValue(req, P_IDX))) {
+            && isValidStringUsername(getBodyParamValue(req, U_IDX))
+            && isValidStringPassword(getBodyParamValue(req, P_IDX))) {
             var username = getBodyParamValue(req, U_IDX);
             var password = getBodyParamValue(req, P_IDX);
             var userId = -1;
@@ -264,4 +265,14 @@ function getBodyParamValue(req, index) {
 // helper method to varify non-empty parameters
 function isValidStringParameter(parameter) {
     return parameter != null && (Number.isSafeInteger(parameter) || parameter.length > 0);
+}
+
+// helper method to varify non-empty parameters
+function isValidStringUsername(username) {
+    return username != null && new RegExp('^[a-zA-Z0-9]{3,30}$').test(username);
+}
+
+// helper method to varify non-empty parameters
+function isValidStringPassword(password) {
+    return password != null && password.length > 0 && new RegExp('^[a-zA-Z0-9]{8,30}$').test(password);
 }

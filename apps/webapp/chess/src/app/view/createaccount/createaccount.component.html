@@ -15,6 +15,10 @@
         <form id="surveyForm" [formGroup]="loginForm">
           <div>
             <div>
+              <p>Username can only contain a-Z, A-Z, 0-9 and be at least 3 characters and at most 30 characters.</p>
+              <p>Password can only contain a-Z, A-Z, 0-9 and be at least 8 characters and at most 30 characters.</p>
+            </div>
+            <div>
               <label for="username">Username:</label>
               <input type="text" formControlName="username" name="username" id="username" required ngModel />
             </div>
