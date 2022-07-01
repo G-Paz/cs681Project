@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators } from "@angular/forms";
 import { Router } from "@angular/router";
 import { DelegateService } from "src/app/service/delegate.service";
 import { IamService } from "src/app/service/iam.service";
+import { environment } from "src/environments/environment";
 
 @Component({
   selector: "app-find-user",
@@ -35,7 +36,7 @@ export class FindUserComponent implements OnInit {
       user.token,
       findUserControls.username.value,
       () => {
-        this.router.navigate(["/profile"]);
+        this.router.navigate(["/" + environment.p]);
       },
       () => {this.message = "Unable to find user."}
     );

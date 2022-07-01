@@ -5,6 +5,7 @@ import pkg from 'pg';
 import config from './config.js';
 import queries from './queries.js';
 import roles from './roles.js';
+// import bodyParser from 'body-parser';
 import express from 'express';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
@@ -13,6 +14,11 @@ import jwt from 'jsonwebtoken';
 const { Pool } = pkg;
 
 const webappCert = fs.readFileSync(config.webapp.pem);
+
+const U_IDX = 0;
+const P_IDX = 1;
+const ID_IDX = 0;
+const TOKEN_IDX = 1;
 
 // configure connection to postgres
 const db_config = {
@@ -46,175 +52,227 @@ const server_port = config.web.port;
 // load server key and cert
 const server_options = {
     key: fs.readFileSync(config.web.key),
-    cert: fs.readFileSync(config.web.cert)
+    cert: fs.readFileSync(config.web.cert),
+    ca: fs.readFileSync(config.webapp.cert)
 };
 
+//configure tokenization util
 const jwtOptions = { algorithm: 'RS256', expiresIn: '24h' };
 
-var app = express().use(cors({}));
+// configure app
+var app = express().use(cors({
+    origin: 'https://localhost:4200',
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
-app.post('/createaccount', async (req, res) => {
-    console.log(req);
-    if (Object.keys(req.query).length == 2 && req.query["username"].length > 0 && req.query["password"].length > 0) {
-        var salt = bcrypt.genSaltSync();
-        var username = req.query["username"]
-        var hash = bcrypt.hashSync(req.query["password"], salt);
-        var userId = -1;
-        var token = null;
-        var errMsg = "There was an error creating user:" + username
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-        // make connection to db
-        await pool.connect()
+app.use((req, res, next) => {
+    res.setHeader('X-Frame-Options', 'DENY')
+    res.setHeader('X-Content-Type-Options', 'nosniff')
+    res.removeHeader('X-Powered-By');
+    next()
+})
 
-        try {
-            //start transaction
-            await pool.query("BEGIN");
-            //create the user
-            await pool.query(queries.CREATE_USER_SQL, [username, null]).then(result => {
-                console.log("created user:" + username);
-                userId = result.rows[0].user_id;
-                return result;
-            })
-            //store seq
-            await pool.query(queries.CREATE_USER_SEQ_SQL, [userId, hash, salt]).then(result => {
-                console.log("created req:" + username);
-                return result;
-            });
-            //assign role
-            await pool.query(queries.ASSIGN_ROLE_TO_USER, [userId, roles.HIKARU_ROLE_ID]).then(result => {
-                console.log("assigned role:" + username);
-                return result;
-            });
+// add create account post endpoint
+app.post('/iapi/createaccount', async (req, res) => {
+    // init the error message
+    var errMsg = "There was an error."
+    // init the user id
+    var userId = -1;
+    // init the token
+    var token = null;
 
-            //token creation
-            console.log("created user token");
-            token = jwt.sign({ userId: userId }, webappCert, jwtOptions);
+    try {
+        if (req.body.params.updates.length == 2
+            && isValidStringUsername(getBodyParamValue(req, U_IDX))
+            && isValidStringPassword(getBodyParamValue(req, P_IDX))) {
+            // create salt for new user creating account
+            var salt = bcrypt.genSaltSync();
+            // extract the valid string parameter
+            var username = getBodyParamValue(req, U_IDX)
+            // hash the p paramter with the salt
+            var hash = bcrypt.hashSync(getBodyParamValue(req, P_IDX), salt);
 
-            // commit queries
-            await pool.query("COMMIT");
-        } catch (e) {
-            // if there was an exception rollback
-            console.error("failed to create user")
-            console.error(e)
-            if (e.constraint == 'user_uk01') {
-                errMsg = "Username: '" + username + "' is already being used."
-            }
-            await pool.query("ROLLBACK");
-        } finally {
-            // if the user was not created successfully return an error
-            if (userId < 0 || token == null) {
-                console.error(errMsg);
-                res.status(500).send(errMsg);
-            } else {
-                res.status(200).json({ id: userId, username: username, role: roles.HIKARU_ROLE_NAME, token: token })
-            }
-        }
-    } else {
-        console.error(errMsg);
-        console.error("Invalid parameters.");
-        res.status(500).send("Unable to create account.");
-    }
-});
+            // make connection to db
+            await pool.connect()
 
-app.post('/authenticate', async (req, res) => {
-    console.log(req);
-    if (Object.keys(req.query).length == 2 && req.query["username"].length > 0 && req.query["password"].length > 0) {
-        var username = req.query["username"];
-        var password = req.query["password"];
-        var userId = -1;
-        var role = null;
-        var token = null;
-        var errMsg = "There was an error verifying user:" + username
-
-        // make connection to db
-        await pool.connect()
-
-        try {
-            //start transaction
-            await pool.query("BEGIN");
-            //create the user
-            await pool.query(queries.SELECT_USER_SEC, [username]).then(result => {
-                console.log("verifying user")
-                if (result.rows.length == 1 && result.rows[0].user_pass == bcrypt.hashSync(password, result.rows[0].salt)) {
-                    console.log("signed in user:" + username);
+            try {
+                //start the transaction
+                await pool.query("BEGIN");
+                //create the user
+                await pool.query(queries.CREATE_USER_SQL, [username, null]).then(result => {
+                    console.log("created user:" + username);
                     userId = result.rows[0].user_id;
-                    role = result.rows[0].role_name;
+                    return result;
+                })
+                //store seq
+                await pool.query(queries.CREATE_USER_SEQ_SQL, [userId, hash, salt]).then(result => {
+                    console.log("created req:" + username);
+                    return result;
+                });
+                //assign role
+                await pool.query(queries.ASSIGN_ROLE_TO_USER, [userId, roles.HIKARU_ROLE_ID]).then(result => {
+                    console.log("assigned role:" + username);
+                    return result;
+                });
+
+                //token creation
+                console.log("created user token");
+                token = jwt.sign({ userId: userId }, webappCert, jwtOptions);
+
+                // commit queries
+                await pool.query("COMMIT");
+            } catch (e) {
+                // if there was an exception rollback
+                console.error("failed to create user")
+                console.error(e)
+                if (e.constraint == 'user_uk01') {
+                    errMsg = "Username: '" + username + "' is already being used."
                 }
-                return result;
-            });
-
-            //token creation
-            console.log("created user token");
-            token = jwt.sign({ userId: userId }, webappCert, jwtOptions);
-
-            // commit queries
-            await pool.query("COMMIT");
-        } catch (e) {
-            // if there was an exception rollback
-            console.error("failed to verify user")
-            console.error(e)
-            await pool.query("ROLLBACK");
-        } finally {
-            // if the user was not created successfully return an error
-            if (userId < 0 || token == null || role == null) {
-                console.error(errMsg);
-                res.status(500).send(errMsg);
-            } else {
-                res.status(200).json({ id: userId, username: username, role: role, token: token })
+                await pool.query("ROLLBACK");
+            } finally {
+                // if the user was not created successfully return an error
+                if (userId < 0 || token == null) {
+                    console.error(errMsg);
+                    res.status(500).send(errMsg);
+                } else {
+                    res.status(200).json({ id: userId, username: username, role: roles.HIKARU_ROLE_NAME, token: token })
+                }
             }
+        } else {
+            console.error(errMsg);
+            res.status(500).send("Unable to create account.");
         }
-    } else {
+    } catch {
         console.error(errMsg);
-        console.error("Invalid parameters.");
         res.status(500).send("Unable to create account.");
     }
 });
 
-app.get('/isValidSession', async (req, res) => {
-    // First read existing users.
-    console.log(req);
-    if (Object.keys(req.query).length == 2 && req.query["userId"] != null && req.query["token"].length > 0) {
-        var userId = req.query["userId"];
-        var token = req.query["token"];
-        var errMsg = "There was an error. Please sign in again."
-        var isValid = false;
+// endpoint to authenticate user sign in
+app.post('/iapi/authenticate', async (req, res) => {
+    var errMsg = "There was an error."
+    try {
+        if (req.body.params.updates.length == 2
+            && isValidStringUsername(getBodyParamValue(req, U_IDX))
+            && isValidStringPassword(getBodyParamValue(req, P_IDX))) {
+            var username = getBodyParamValue(req, U_IDX);
+            var password = getBodyParamValue(req, P_IDX);
+            var userId = -1;
+            var role = null;
+            var token = null;
 
-        try {
-            isValid = jwt.verify(token, webappCert, jwtOptions).userId == userId;
-        } catch (e) {
-            // if there was an exception rollback
-            console.error("failed to validate token")
-            console.error(e)
-            if (e.name == 'TokenExpiredError') {
-                errMsg = "Token is expired."
+            // make connection to db
+            await pool.connect()
+
+            try {
+                //start transaction
+                await pool.query("BEGIN");
+                //create the user
+                await pool.query(queries.SELECT_USER_SEC, [username]).then(result => {
+                    console.log("verifying user")
+                    if (result.rows.length == 1 && result.rows[0].user_pass == bcrypt.hashSync(password, result.rows[0].salt)) {
+                        console.log("signed in user");
+                        userId = result.rows[0].user_id;
+                        role = result.rows[0].role_name;
+                    }
+                    return result;
+                });
+
+                //token creation
+                console.log("created user token");
+                token = jwt.sign({ userId: userId }, webappCert, jwtOptions);
+
+                // commit queries
+                await pool.query("COMMIT");
+            } catch (e) {
+                // if there was an exception rollback
+                console.error("failed to verify user")
+                console.error(e)
+                await pool.query("ROLLBACK");
+            } finally {
+                // if the user was not created successfully return an error
+                if (userId < 0 || token == null || role == null) {
+                    console.error(errMsg);
+                    res.status(500).send(errMsg);
+                } else {
+                    res.status(200).json({ id: userId, username: username, role: role, token: token })
+                }
             }
-        } finally {
-            // if the user was not created successfully return an error
-            if (userId < 0 || token == null || !isValid) {
-                console.error(errMsg);
-                res.status(500).send(errMsg).json({ isValid: isValid });
-            } else {
-                res.status(200).json({ isValid: isValid })
-            }
+        } else {
+            console.error(errMsg);
+            res.status(500).send("Unable to create account.");
         }
-    } else {
+    } catch {
         console.error(errMsg);
-        console.error("Invalid parameters.");
-        res.status(500).send(errMsg);
+        res.status(500).send("Unable to create account.");
     }
 });
 
-// create the server
-const server = createServer(server_options, app).on('error', (err) => {
-    console.log(err);
-}).on('clientError', (err) => {
-    console.log(err);
-}).on('close', (err) => {
-    console.log(err);
+// endpoint to determine if the user is in a valid session
+app.post('/iapi/isValidSession', async (req, res) => {
+    // First read existing users.
+    var errMsg = "There was an error."
+    try {
+        if (req.body.params.updates.length == 2
+            && isValidStringParameter(getBodyParamValue(req, ID_IDX))
+            && isValidStringParameter(getBodyParamValue(req, TOKEN_IDX))) {
+
+            var userId = getBodyParamValue(req, ID_IDX);
+            var token = getBodyParamValue(req, TOKEN_IDX);
+            var isValid = false;
+
+            try {
+                isValid = jwt.verify(token, webappCert, jwtOptions).userId == userId;
+            } catch (e) {
+                // if there was an exception rollback
+                console.error("failed to validate token")
+                console.error(e)
+                if (e.name == 'TokenExpiredError') {
+                    errMsg = "Token is expired."
+                }
+            } finally {
+                // if the user was not created successfully return an error
+                if (userId < 0 || token == null || !isValid) {
+                    console.error(errMsg);
+                    res.status(500).send(errMsg).json({ isValid: isValid });
+                } else {
+                    res.status(200).json({ isValid: isValid })
+                }
+            }
+        } else {
+            console.error(errMsg);
+            res.status(500).send("Server error.");
+        }
+    } catch {
+        console.error(errMsg);
+        res.status(500).send("Server error.");
+    }
 });
 
-// start server
-server.listen(server_port, server_hostname, () => {
-    console.log(`Server running at http://${server_hostname}:${server_port}/`);
+// create and start the server
+createServer(server_options, app).listen(server_port, server_hostname, () => {
+    console.log(`Server running at https://${server_hostname}:${server_port}/`);
 });
 
+function getBodyParamValue(req, index) {
+    return req.body.params.updates[index].value;
+}
+
+// helper method to varify non-empty parameters
+function isValidStringParameter(parameter) {
+    return parameter != null && (Number.isSafeInteger(parameter) || parameter.length > 0);
+}
+
+// helper method to varify non-empty parameters
+function isValidStringUsername(username) {
+    return username != null && new RegExp('^[a-zA-Z0-9]{3,30}$').test(username);
+}
+
+// helper method to varify non-empty parameters
+function isValidStringPassword(password) {
+    return password != null && password.length > 0 && new RegExp('^[a-zA-Z0-9]{8,30}$').test(password);
+}

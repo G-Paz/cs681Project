@@ -2,6 +2,7 @@ import { Component, OnInit } from "@angular/core";
 import { FormBuilder, FormGroup, Validators } from "@angular/forms";
 import { ActivatedRoute, Router } from "@angular/router";
 import { first } from "rxjs/operators";
+import { environment } from "src/environments/environment";
 import { IamService } from "../../service/iam.service";
 // import * as bcrypt from 'bcryptjs';
 
@@ -20,7 +21,7 @@ export class CreateaccountComponent implements OnInit {
     private router: Router
   ) {
     if (this.iamService.userValue) {
-      this.router.navigate(["/"]);
+      this.router.navigate([environment.h]);
     }
     // init to be replaced in ngOnInit
     this.loginForm = this.formBuilder.group({});
@@ -50,10 +51,7 @@ export class CreateaccountComponent implements OnInit {
           // get return url from query parameters or default to home page
           const returnUrl = this.route.snapshot.queryParams["returnUrl"] || "/";
           this.router.navigateByUrl(returnUrl);
-        },
-        error: (error) => {
-          console.log("error");
-        },
+        }
       });
   }
 }

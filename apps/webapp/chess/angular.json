@@ -24,7 +24,9 @@
             "tsConfig": "tsconfig.app.json",
             "assets": [
               "src/favicon.ico",
-              "src/assets"
+              "src/assets",
+              "src/robots.txt",
+              "src/sitemap.xml"
             ],
             "styles": [
               "src/styles.css"
@@ -74,7 +76,22 @@
               "browserTarget": "chess:build:development"
             }
           },
-          "defaultConfiguration": "development"
+          "options": {
+            "ssl": true,
+            "sslCert": "./ssl/webapp.crt",
+            "sslKey": "./ssl/webapp.key",
+            "proxyConfig": "./proxy.config.json",
+            "headers": {
+              "X-Powered-By": "",
+              "Content-Security-Policy": "default-src 'self' 'unsafe-inline' https://*.cdnjs.cloudflare.com  https://*.www.w3schools.com https://*.localhost:4200/;  connect-src wss://*.localhost:4200/ https://*.localhost:4200/; img-src 'self'; frame-ancestors 'self'; form-action 'self'",
+              "Access-Control-Allow-Origin": "https://localhost:4200/*",
+              "X-Frame-Options": "DENY",
+              "X-Content-Type-Options": "nosniff",
+              "Date": "",
+              "Cache-Control": "no-cache, no-store, must-revalidate"
+            }
+          },
+          "defaultConfiguration": "production"
         },
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
@@ -91,7 +108,9 @@
             "karmaConfig": "karma.conf.js",
             "assets": [
               "src/favicon.ico",
-              "src/assets"
+              "src/assets",
+              "src/robots.txt",
+              "src/sitemap.xml"
             ],
             "styles": [
               "src/styles.css"
