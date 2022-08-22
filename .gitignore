@@ -120,5 +120,6 @@ dist
 .bsp1
 .metals
 .vscode
+.bsp
 
 /**/ssl/**
